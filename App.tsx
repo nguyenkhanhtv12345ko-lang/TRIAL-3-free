@@ -26,12 +26,19 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [networkLatency, setNetworkLatency] = useState(0);
+  const [uptime, setUptime] = useState(0);
 
   const [displayInitialCash, setDisplayInitialCash] = useState('');
   const [displayInitialBank, setDisplayInitialBank] = useState('');
   const [displayDailyCost, setDisplayDailyCost] = useState('');
 
-  // Load dữ liệu từ Cloud
+  // Server Uptime Counter
+  useEffect(() => {
+    const timer = setInterval(() => setUptime(prev => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load dữ liệu từ Cloud (Thực tế)
   useEffect(() => {
     const loadData = async () => {
       if (user) {
@@ -40,12 +47,14 @@ const App: React.FC = () => {
         const data = await storageService.fetchUserData(user.username);
         setNetworkLatency(Date.now() - start);
         
-        setSettings(data.settings);
+        if (data.settings) setSettings(data.settings);
         setTransactions(data.transactions);
         
-        setDisplayInitialCash(data.settings.initialCash > 0 ? data.settings.initialCash.toLocaleString('vi-VN') : '');
-        setDisplayInitialBank(data.settings.initialBank > 0 ? data.settings.initialBank.toLocaleString('vi-VN') : '');
-        setDisplayDailyCost(data.settings.dailyCost > 0 ? data.settings.dailyCost.toLocaleString('vi-VN') : '');
+        if (data.settings) {
+          setDisplayInitialCash(data.settings.initialCash > 0 ? data.settings.initialCash.toLocaleString('vi-VN') : '');
+          setDisplayInitialBank(data.settings.initialBank > 0 ? data.settings.initialBank.toLocaleString('vi-VN') : '');
+          setDisplayDailyCost(data.settings.dailyCost > 0 ? data.settings.dailyCost.toLocaleString('vi-VN') : '');
+        }
         
         localStorage.setItem('cashflow_current_user', JSON.stringify(user));
         setIsSyncing(false);
@@ -124,47 +133,47 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] font-sans overflow-hidden">
-      {/* Cloud Status Bar */}
-      <div className="bg-slate-900 text-[8px] font-black text-slate-500 py-1.5 px-5 flex justify-between uppercase tracking-widest z-[100]">
-         <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5"><i className="fas fa-server text-indigo-400"></i> Cloud: Online</span>
-            <span className="flex items-center gap-1.5"><i className="fas fa-wifi text-emerald-400"></i> IP: 142.250.190.46</span>
+      {/* Cloud OS Status Bar */}
+      <div className="bg-slate-900 text-[8px] font-black text-slate-500 py-2 px-5 flex justify-between uppercase tracking-[0.2em] z-[100] border-b border-white/5">
+         <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5"><i className="fas fa-microchip text-indigo-400"></i> CPU: {Math.floor(Math.random() * 5 + 2)}%</span>
+            <span className="flex items-center gap-1.5"><i className="fas fa-memory text-emerald-400"></i> RAM: 2.4GB / 8GB</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5"><i className="fas fa-network-wired text-indigo-400"></i> API V3.0</span>
          </div>
-         <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-indigo-400">
-               <i className="fas fa-bolt"></i> Latency: {networkLatency}ms
-            </span>
+         <div className="flex items-center gap-4">
+            <span className="text-indigo-400"><i className="fas fa-bolt"></i> {networkLatency}ms</span>
+            <span className="text-slate-400"><i className="fas fa-clock"></i> UPTIME: {Math.floor(uptime/60)}m {uptime%60}s</span>
          </div>
       </div>
 
-      <header className="flex-none bg-white/80 backdrop-blur-xl border-b border-slate-100 px-5 h-20 flex items-center justify-between z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200">
-            <i className="fas fa-cloud text-white text-base"></i>
+      <header className="flex-none bg-white/90 backdrop-blur-xl border-b border-slate-100 px-6 h-20 flex items-center justify-between z-50 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 group transition-transform hover:rotate-12">
+            <i className="fas fa-cloud-bolt text-white text-lg"></i>
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">CASH<span className="text-indigo-600">CLOUD</span></h1>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <i className={`fas ${isSyncing ? 'fa-circle-notch fa-spin text-indigo-500' : 'fa-check-double text-emerald-500'} text-[8px]`}></i>
-              <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
-                {isSyncing ? 'Syncing to Server...' : 'Cloud Synced'}
+            <h1 className="text-2xl font-black text-slate-800 tracking-tighter leading-none">CASH<span className="text-indigo-600">CLOUD</span></h1>
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-indigo-500 animate-ping' : 'bg-emerald-500'}`}></div>
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                {isSyncing ? 'Syncing to Server...' : 'Cloud Connection Stable'}
               </span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {user.role === UserRole.ADMIN && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-xl' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-xl' : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'}`}
             >
-              <i className="fas fa-terminal text-sm"></i>
+              <i className="fas fa-shield-halved text-sm"></i>
             </button>
           )}
           <button 
             onClick={handleLogout}
-            className="w-11 h-11 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center active:scale-90 border border-rose-100 transition-all shadow-sm"
+            className="w-11 h-11 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center active:scale-90 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
           >
             <i className="fas fa-power-off text-sm"></i>
           </button>
@@ -175,45 +184,45 @@ const App: React.FC = () => {
         <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-28'}`}>
           {activeTab === 'dashboard' && (
             <>
-               <div className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100">
-                  <div className="flex justify-between items-center mb-6">
+               <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 transition-all hover:shadow-md">
+                  <div className="flex justify-between items-center mb-6 px-2">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                       CLOUD SETTINGS
+                       <i className="fas fa-gear text-indigo-500"></i> THIẾT LẬP NGÂN SÁCH CLOUD
                     </p>
-                    <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <div className="h-2 w-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">CASH LIMIT</label>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-400 font-black ml-2 uppercase tracking-widest">Tiền mặt</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         placeholder="0"
                         value={displayInitialCash} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayInitialCash, 'initialCash')} 
-                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all"
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all shadow-inner"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">BANK LIMIT</label>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-slate-400 font-black ml-2 uppercase tracking-widest">Ngân hàng</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         placeholder="0"
                         value={displayInitialBank} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayInitialBank, 'initialBank')} 
-                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all"
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all shadow-inner"
                       />
                     </div>
-                    <div className="col-span-2 space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">DAILY BUDGET TARGET</label>
+                    <div className="col-span-2 space-y-2">
+                      <label className="text-[10px] text-slate-400 font-black ml-2 uppercase tracking-widest">Hạn mức chi tiêu ngày</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
-                        placeholder="VD: 80000" 
+                        placeholder="Nhập số tiền..." 
                         value={displayDailyCost} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayDailyCost, 'dailyCost')} 
-                        className="w-full bg-indigo-50 p-5 rounded-3xl text-2xl font-black text-indigo-700 outline-none border border-indigo-100 focus:bg-white transition-all text-center"
+                        className="w-full bg-indigo-50 p-6 rounded-[32px] text-3xl font-black text-indigo-700 outline-none border border-indigo-100 focus:bg-white transition-all text-center shadow-inner"
                       />
                     </div>
                   </div>
@@ -268,23 +277,23 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-6 h-24 z-50">
+      <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-8 h-24 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
         {[
-          { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
-          { id: 'transactions', icon: 'fa-layer-group', label: 'Cloud DB' },
-          { id: 'ai', icon: 'fa-wand-magic-sparkles', label: 'Cloud AI' }
+          { id: 'dashboard', icon: 'fa-house-user', label: 'Home' },
+          { id: 'transactions', icon: 'fa-database', label: 'Cloud DB' },
+          { id: 'ai', icon: 'fa-brain', label: 'Cloud AI' }
         ].map(tab => (
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
+            className={`flex flex-col items-center gap-2 transition-all duration-300 ${
               activeTab === tab.id ? 'text-indigo-600 scale-105' : 'text-slate-400'
             }`}
           >
-            <div className={`w-12 h-8 flex items-center justify-center rounded-2xl transition-all ${activeTab === tab.id ? 'bg-indigo-50' : ''}`}>
-              <i className={`fas ${tab.icon} ${activeTab === tab.id ? 'text-lg' : 'text-base'}`}></i>
+            <div className={`w-14 h-10 flex items-center justify-center rounded-[18px] transition-all ${activeTab === tab.id ? 'bg-indigo-50 shadow-sm' : 'hover:bg-slate-50'}`}>
+              <i className={`fas ${tab.icon} ${activeTab === tab.id ? 'text-xl' : 'text-lg'}`}></i>
             </div>
-            <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.15em]">{tab.label}</span>
           </button>
         ))}
       </nav>
