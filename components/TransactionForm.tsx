@@ -1,32 +1,48 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, PaymentSource } from '../types';
 
 interface Props {
   onAdd: (t: Omit<Transaction, 'id'>) => void;
+  editingTransaction?: Transaction | null;
+  onUpdate?: (t: Transaction) => void;
+  onCancelEdit?: () => void;
 }
 
-const TransactionForm: React.FC<Props> = ({ onAdd }) => {
+const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate, onCancelEdit }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [content, setContent] = useState('');
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [source, setSource] = useState<PaymentSource>(PaymentSource.CASH);
-  const [displayAmount, setDisplayAmount] = useState(''); // State lưu chuỗi hiển thị có dấu phân cách
+  const [displayAmount, setDisplayAmount] = useState('');
 
-  // Hàm định dạng số khi người dùng nhập
+  useEffect(() => {
+    if (editingTransaction) {
+      setDate(editingTransaction.date);
+      setContent(editingTransaction.content);
+      setType(editingTransaction.type);
+      setSource(editingTransaction.source);
+      setDisplayAmount(editingTransaction.amount.toLocaleString('vi-VN'));
+    } else {
+      resetForm();
+    }
+  }, [editingTransaction]);
+
+  const resetForm = () => {
+    setDate(new Date().toISOString().split('T')[0]);
+    setContent('');
+    setType(TransactionType.EXPENSE);
+    setSource(PaymentSource.CASH);
+    setDisplayAmount('');
+  };
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Chỉ giữ lại các chữ số
     const rawValue = e.target.value.replace(/\D/g, '');
-    
-    // Loại bỏ số 0 ở đầu nếu có nhiều hơn 1 chữ số
     const cleanValue = rawValue.replace(/^0+/, '');
-
     if (cleanValue === '') {
       setDisplayAmount('');
       return;
     }
-
-    // Định dạng có dấu chấm phân cách phần nghìn (VND style)
     const formattedValue = Number(cleanValue).toLocaleString('vi-VN');
     setDisplayAmount(formattedValue);
   };
@@ -34,97 +50,137 @@ const TransactionForm: React.FC<Props> = ({ onAdd }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numericAmount = Number(displayAmount.replace(/\./g, ''));
+    if (!content || numericAmount <= 0) {
+      alert("Vui lòng nhập đầy đủ nội dung và số tiền!");
+      return;
+    }
     
-    if (!content || numericAmount <= 0) return;
-    
-    onAdd({
-      date,
-      content,
-      type,
-      source,
-      amount: numericAmount
-    });
-
-    setContent('');
-    setDisplayAmount('');
+    if (editingTransaction && onUpdate) {
+      onUpdate({
+        ...editingTransaction,
+        date,
+        content,
+        type,
+        source,
+        amount: numericAmount
+      });
+    } else {
+      onAdd({
+        date,
+        content,
+        type,
+        source,
+        amount: numericAmount
+      });
+    }
+    resetForm();
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-         <i className="fas fa-plus-circle text-indigo-500"></i>
-         Thêm giao dịch mới
-      </h3>
+    <div className={`p-6 rounded-3xl shadow-xl border transition-all duration-300 ${
+      editingTransaction 
+        ? 'bg-amber-50 border-amber-300 ring-4 ring-amber-100' 
+        : 'bg-white border-slate-100'
+    }`}>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+          <i className={`fas ${editingTransaction ? 'fa-pen-to-square text-amber-500' : 'fa-plus-circle text-indigo-600'}`}></i>
+          {editingTransaction ? 'CẬP NHẬT GIAO DỊCH' : 'THÊM MỚI'}
+        </h3>
+        {editingTransaction && (
+          <button 
+            onClick={onCancelEdit}
+            className="text-[10px] font-black bg-rose-100 text-rose-600 px-3 py-1.5 rounded-full hover:bg-rose-200 transition-colors uppercase tracking-widest"
+          >
+            Hủy Sửa
+          </button>
+        )}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Ngày</label>
-          <input 
-            type="date" 
-            value={date} 
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Nội dung</label>
-          <input 
-            type="text" 
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Ví dụ: Ăn trưa, Tiền lương..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Phân loại</label>
-            <select 
-              value={type} 
-              onChange={(e) => setType(e.target.value as TransactionType)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value={TransactionType.INCOME}>Thu</option>
-              <option value={TransactionType.EXPENSE}>Chi</option>
-            </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Ngày tháng</label>
+            <input 
+              type="date" 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Nguồn tiền</label>
-            <select 
-              value={source} 
-              onChange={(e) => setSource(e.target.value as PaymentSource)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value={PaymentSource.CASH}>Tiền mặt</option>
-              <option value={PaymentSource.BANK}>Tài khoản</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Số tiền (VND)</label>
-          <div className="relative">
+          <div className="col-span-2 sm:col-span-1">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nội dung</label>
             <input 
               type="text" 
-              inputMode="numeric"
-              value={displayAmount}
-              onChange={handleAmountChange}
-              placeholder="0"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-3 outline-none focus:ring-2 focus:ring-indigo-500 text-2xl font-black text-indigo-900 placeholder-slate-300"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Mua sắm, ăn uống..."
+              className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             />
-            {displayAmount && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">VND</span>
-            )}
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Loại</label>
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button 
+                type="button"
+                onClick={() => setType(TransactionType.EXPENSE)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${type === TransactionType.EXPENSE ? 'bg-white shadow-sm text-rose-600' : 'text-slate-500'}`}
+              >
+                Chi tiêu
+              </button>
+              <button 
+                type="button"
+                onClick={() => setType(TransactionType.INCOME)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${type === TransactionType.INCOME ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500'}`}
+              >
+                Thu nhập
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nguồn</label>
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button 
+                type="button"
+                onClick={() => setSource(PaymentSource.CASH)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${source === PaymentSource.CASH ? 'bg-white shadow-sm text-amber-600' : 'text-slate-500'}`}
+              >
+                Tiền mặt
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSource(PaymentSource.BANK)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${source === PaymentSource.BANK ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+              >
+                ATM
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Số tiền (VND)</label>
+          <input 
+            type="text" 
+            inputMode="numeric"
+            value={displayAmount}
+            onChange={handleAmountChange}
+            placeholder="0"
+            className={`w-full text-3xl font-black text-center py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`}
+          />
         </div>
 
         <button 
           type="submit"
-          className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-2"
+          className={`w-full py-4 rounded-2xl font-black text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 ${
+            editingTransaction ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
         >
-          <i className="fas fa-check-circle"></i>
-          Xác nhận giao dịch
+          <i className={`fas ${editingTransaction ? 'fa-save' : 'fa-check-double'}`}></i>
+          {editingTransaction ? 'LƯU THAY ĐỔI' : 'XÁC NHẬN GIAO DỊCH'}
         </button>
       </form>
     </div>

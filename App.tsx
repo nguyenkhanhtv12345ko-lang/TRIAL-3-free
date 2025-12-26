@@ -20,6 +20,9 @@ const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai'>('dashboard');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // Trạng thái cho việc chỉnh sửa
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     localStorage.setItem('cashflow_settings', JSON.stringify(settings));
@@ -60,9 +63,27 @@ const App: React.FC = () => {
     setTransactions([{...t, id: Date.now().toString()}, ...transactions]);
   };
 
+  const handleUpdateTransaction = (updated: Transaction) => {
+    setTransactions(transactions.map(t => t.id === updated.id ? updated : t));
+    setEditingTransaction(null);
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) {
+      setTransactions(transactions.filter(t => t.id !== id));
+      if (editingTransaction?.id === id) setEditingTransaction(null);
+    }
+  };
+
+  const handleEditClick = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setActiveTab('transactions');
+    // Scroll lên đầu trang để thấy form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
-      {/* Top Header - Mobile Optimized */}
       <header className="flex-none h-14 bg-white border-b flex items-center justify-between px-4 sticky top-0 z-50">
         <h1 className="text-lg font-black text-indigo-900 flex items-center gap-2">
           <i className="fas fa-wallet text-yellow-500"></i> CASHFLOW
@@ -78,7 +99,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
         {activeTab === 'dashboard' && (
           <div className="max-w-md mx-auto space-y-4">
@@ -98,11 +118,17 @@ const App: React.FC = () => {
 
         {activeTab === 'transactions' && (
           <div className="max-w-md mx-auto space-y-4">
-            <TransactionForm onAdd={handleAddTransaction} />
+            <TransactionForm 
+              onAdd={handleAddTransaction} 
+              editingTransaction={editingTransaction}
+              onUpdate={handleUpdateTransaction}
+              onCancelEdit={() => setEditingTransaction(null)}
+            />
             <TransactionList 
               transactions={transactions} 
               settings={settings}
-              onDelete={id => setTransactions(transactions.filter(t => t.id !== id))} 
+              onDelete={handleDeleteTransaction}
+              onEdit={handleEditClick}
             />
           </div>
         )}
@@ -126,7 +152,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Navigation - Bottom bar style */}
       <nav className="fixed bottom-0 inset-x-0 h-16 bg-indigo-900 flex justify-around items-center safe-area-bottom shadow-[0_-5px_15px_rgba(0,0,0,0.1)]">
         {[
           { id: 'dashboard', icon: 'fa-chart-pie', label: 'Hệ thống' },

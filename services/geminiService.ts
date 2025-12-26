@@ -4,38 +4,24 @@ import { Transaction, FinancialStats } from "../types";
 
 export class GeminiService {
   private getAI() {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // Luôn kiểm tra API KEY để tránh lỗi undefined
+    const apiKey = process?.env?.API_KEY || "";
+    return new GoogleGenAI({ apiKey });
   }
 
   private chatSession: Chat | null = null;
 
-  // Khai báo công cụ thêm giao dịch cho AI
   private readonly addTransactionTool: FunctionDeclaration = {
     name: 'add_transaction',
     parameters: {
       type: Type.OBJECT,
-      description: 'Thêm một giao dịch thu hoặc chi mới vào nhật ký tài chính của người dùng.',
+      description: 'Ghi lại một khoản thu hoặc chi.',
       properties: {
-        content: {
-          type: Type.STRING,
-          description: 'Mô tả ngắn gọn về giao dịch (ví dụ: Ăn trưa, Nhận lương, Mua cafe)',
-        },
-        amount: {
-          type: Type.NUMBER,
-          description: 'Số tiền giao dịch (đơn vị VND)',
-        },
-        transaction_type: {
-          type: Type.STRING,
-          description: 'Loại giao dịch: "Thu" cho thu nhập, "Chi" cho chi tiêu.',
-        },
-        source: {
-          type: Type.STRING,
-          description: 'Nguồn tiền: "Tiền mặt" hoặc "Tài khoản". Nếu người dùng không nói, hãy mặc định là "Tiền mặt".',
-        },
-        date: {
-          type: Type.STRING,
-          description: 'Ngày giao dịch định dạng YYYY-MM-DD. Mặc định là ngày hôm nay.',
-        }
+        content: { type: Type.STRING, description: 'Nội dung (ví dụ: Ăn phở, Lương tháng 5)' },
+        amount: { type: Type.NUMBER, description: 'Số tiền VND' },
+        transaction_type: { type: Type.STRING, description: 'Thu hoặc Chi' },
+        source: { type: Type.STRING, description: 'Tiền mặt hoặc Tài khoản' },
+        date: { type: Type.STRING, description: 'YYYY-MM-DD' }
       },
       required: ['content', 'amount', 'transaction_type'],
     },
@@ -43,66 +29,38 @@ export class GeminiService {
 
   initChat(transactions: Transaction[], stats: FinancialStats) {
     const ai = this.getAI();
-    const today = new Date().toISOString().split('T')[0];
-    
-    const context = `
-      Bạn là FinAssist - Trợ lý quản lý dòng tiền thông minh.
-      Hôm nay là ngày: ${today}.
-      
-      Dữ liệu người dùng hiện tại:
-      - Tiền mặt: ${stats.currentCash.toLocaleString()} VND
-      - Tài khoản: ${stats.currentBank.toLocaleString()} VND
-      - Tổng cộng: ${stats.total.toLocaleString()} VND
-      
-      QUY TẮC QUAN TRỌNG:
-      1. Nếu người dùng mô tả một sự việc có tính chất tài chính (ví dụ: "mình vừa ăn phở 50k", "vừa được thưởng 1 triệu"), hãy LUÔN gọi hàm 'add_transaction' để ghi lại.
-      2. Sau khi thực hiện lệnh gọi hàm, hãy thông báo cụ thể cho người dùng biết bạn đã ghi nhận thông tin gì (Số tiền, Nội dung, Loại giao dịch).
-      3. Hãy luôn thân thiện, ngắn gọn và chuyên nghiệp.
-      4. Phán đoán thông minh: "mất", "trả", "mua", "chi", "đóng tiền" -> Chi; "nhận", "thưởng", "lương", "lời", "thu" -> Thu.
-    `;
+    const context = `Bạn là FinAssist. Hãy giúp người dùng ghi lại thu chi cực nhanh.
+    Sau mỗi khi người dùng cung cấp thông tin giao dịch, hãy gọi hàm add_transaction ngay lập tức.
+    Khi hoàn thành, hãy trả lời cực ngắn gọn để người dùng biết bạn đã thực hiện xong.`;
 
     this.chatSession = ai.chats.create({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-3-flash-preview',
       config: {
         systemInstruction: context,
         tools: [{ functionDeclarations: [this.addTransactionTool] }],
-        temperature: 0.5,
+        temperature: 0.3,
       },
     });
   }
 
   async *askAIStream(query: string) {
-    if (!this.chatSession) throw new Error("Chat chưa được khởi tạo");
-    
+    if (!this.chatSession) return;
     const result = await this.chatSession.sendMessageStream({ message: query });
-    
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
-      
       if (c.candidates?.[0]?.content?.parts) {
         for (const part of c.candidates[0].content.parts) {
-          if (part.functionCall) {
-             yield { type: 'function_call', call: part.functionCall };
-          }
+          if (part.functionCall) yield { type: 'function_call', call: part.functionCall };
         }
       }
-
-      if (c.text) {
-        yield { type: 'text', text: c.text };
-      }
+      if (c.text) yield { type: 'text', text: c.text };
     }
   }
 
   async sendFunctionResponse(callId: string, name: string, response: any) {
     if (!this.chatSession) return;
     await this.chatSession.sendMessage({
-      message: JSON.stringify({
-        functionResponses: {
-          id: callId,
-          name: name,
-          response: response
-        }
-      })
+      message: JSON.stringify({ functionResponses: { id: callId, name, response } })
     });
   }
 
@@ -111,64 +69,28 @@ export class GeminiService {
     try {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: `Đọc nội dung này bằng tiếng Việt: ${text}` }] }],
+        contents: [{ parts: [{ text: `Đọc: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Puck' },
-            },
-          },
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } } },
         },
       });
-
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        await this.playAudioFromBase64(base64Audio);
-      }
-    } catch (error) {
-      console.error("TTS Error:", error);
-    }
+      const base64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64) await this.playAudio(base64);
+    } catch (e) {}
   }
 
-  private async playAudioFromBase64(base64: string) {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      const bytes = this.decode(base64);
-      const audioBuffer = await this.decodeAudioData(bytes, audioContext, 24000, 1);
-      
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
-      source.start();
-    } catch (e) {
-      console.warn("Audio playback failed", e);
-    }
-  }
-
-  private decode(base64: string) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  }
-
-  private async decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
-    const dataInt16 = new Int16Array(data.buffer);
-    const frameCount = dataInt16.length / numChannels;
-    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-    for (let channel = 0; channel < numChannels; channel++) {
-      const channelData = buffer.getChannelData(channel);
-      for (let i = 0; i < frameCount; i++) {
-        channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-      }
-    }
-    return buffer;
+  private async playAudio(base64: string) {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    const dataInt16 = new Int16Array(bytes.buffer);
+    const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start();
   }
 }
-
 export const geminiService = new GeminiService();

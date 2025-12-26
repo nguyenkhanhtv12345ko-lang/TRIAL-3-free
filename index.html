@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#312e81">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>CashFlow Master</title>
+    <title>CashFlow Master - Quản lý Thu Chi</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -17,39 +17,38 @@
           font-family: 'Inter', sans-serif; 
           overscroll-behavior-y: contain;
           -webkit-tap-highlight-color: transparent;
-          padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
-        /* Mobile Active State */
         .active-scale:active { transform: scale(0.95); }
-
-        /* Ẩn nút tăng giảm số tiền (Spinners) */
+        /* Style cho scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        /* Chống lỗi hiển thị số */
         input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        input[type=number] {
-          -moz-appearance: textfield;
-        }
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
     </style>
-<script>
-  // Polyfill for process.env to prevent white screen if the bundler doesn't inject it
-  window.process = window.process || { env: {} };
-</script>
-<script type="importmap">
-{
-  "imports": {
-    "recharts": "https://esm.sh/recharts@2.13.0",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
-    "@google/genai": "https://esm.sh/@google/genai@1.34.0",
-    "react": "https://esm.sh/react@18.3.1",
-    "react/": "https://esm.sh/react@18.3.1/"
-  }
-}
-</script>
+    <script>
+      // Đảm bảo không lỗi nếu bundler không định nghĩa process
+      window.process = window.process || { env: {} };
+      if (!window.process.env) window.process.env = {};
+    </script>
+    <script type="importmap">
+    {
+      "imports": {
+        "recharts": "https://esm.sh/recharts@2.12.7",
+        "react-dom": "https://esm.sh/react-dom@18.3.1",
+        "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+        "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+        "react": "https://esm.sh/react@18.3.1",
+        "react/": "https://esm.sh/react@18.3.1/"
+      }
+    }
+    </script>
 </head>
-<body class="bg-slate-50 text-slate-900 overflow-hidden">
-    <div id="root" class="h-full"></div>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
