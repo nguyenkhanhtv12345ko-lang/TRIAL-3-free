@@ -31,4 +31,6 @@ export interface FinancialStats {
   survivalDays: number;
   totalIncome: number;
   totalExpense: number;
+  todayExpense: number;
+  cumulativeSaving: number; // Khoản Nho Nhỏ tích lũy
 }

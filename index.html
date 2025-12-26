@@ -19,21 +19,51 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
-        :root { --safe-area-inset-bottom: env(safe-area-inset-bottom); }
+        
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sar: env(safe-area-inset-right);
+            --sab: env(safe-area-inset-bottom);
+            --sal: env(safe-area-inset-left);
+        }
+
         body { 
           font-family: 'Inter', sans-serif; 
           overscroll-behavior-y: contain;
           -webkit-tap-highlight-color: transparent;
           background-color: #f8fafc;
+          height: 100vh;
+          height: -webkit-fill-available;
+          margin: 0;
+          overflow: hidden;
         }
+
+        #root {
+          height: 100%;
+        }
+
         .active-scale:active { transform: scale(0.96); }
+        
         .glass-effect {
-          background: rgba(255, 255, 255, 0.8);
+          background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
+
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Smooth scrolling for components */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
     </style>
     
     <script>
