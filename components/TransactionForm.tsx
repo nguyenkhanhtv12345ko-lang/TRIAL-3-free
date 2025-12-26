@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType, PaymentSource } from '../types';
 
 interface Props {
-  onAdd: (t: Omit<Transaction, 'id'>) => void;
+  // Fix: Omit userId as it is handled in the parent component
+  onAdd: (t: Omit<Transaction, 'id' | 'userId'>) => void;
   editingTransaction?: Transaction | null;
   onUpdate?: (t: Transaction) => void;
   onCancelEdit?: () => void;
@@ -65,6 +66,7 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
         amount: numericAmount
       });
     } else {
+      // Fix: Now correctly calling onAdd without userId
       onAdd({
         date,
         content,
