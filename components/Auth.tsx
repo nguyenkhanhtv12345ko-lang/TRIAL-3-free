@@ -155,17 +155,6 @@ const Auth: React.FC<Props> = ({ onLogin }) => {
               {isLogin ? 'Vào Hệ Thống' : 'Tạo Tài Khoản Mới'}
             </button>
           </form>
-
-          {isLogin && (
-            <div className="mt-8 pt-6 border-t border-white/5 text-center">
-               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Demo Admin Access</p>
-               <div className="inline-flex gap-4 bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                  <span className="text-[10px] text-indigo-400 font-mono">admin</span>
-                  <span className="text-white/20">|</span>
-                  <span className="text-[10px] text-indigo-400 font-mono">123</span>
-               </div>
-            </div>
-          )}
         </div>
         
         <p className="text-center mt-8 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">

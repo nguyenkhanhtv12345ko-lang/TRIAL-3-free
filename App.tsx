@@ -10,7 +10,6 @@ import AdminPanel from './components/AdminPanel';
 import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
-  // Trạng thái người dùng - khởi tạo từ localStorage
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('cashflow_current_user');
@@ -25,12 +24,10 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'admin'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  // States hỗ trợ hiển thị format số trong input
   const [displayInitialCash, setDisplayInitialCash] = useState('');
   const [displayInitialBank, setDisplayInitialBank] = useState('');
   const [displayDailyCost, setDisplayDailyCost] = useState('');
 
-  // Xử lý khi người dùng thay đổi (Đăng nhập/Đăng xuất)
   useEffect(() => {
     if (user) {
       const savedSettings = localStorage.getItem(`cashflow_settings_${user.username}`);
@@ -40,13 +37,12 @@ const App: React.FC = () => {
       setSettings(loadedSettings);
       setTransactions(savedTrans ? JSON.parse(savedTrans) : []);
       
-      setDisplayInitialCash(loadedSettings.initialCash?.toLocaleString('vi-VN') || '');
-      setDisplayInitialBank(loadedSettings.initialBank?.toLocaleString('vi-VN') || '');
-      setDisplayDailyCost(loadedSettings.dailyCost?.toLocaleString('vi-VN') || '');
+      setDisplayInitialCash(loadedSettings.initialCash > 0 ? loadedSettings.initialCash.toLocaleString('vi-VN') : '');
+      setDisplayInitialBank(loadedSettings.initialBank > 0 ? loadedSettings.initialBank.toLocaleString('vi-VN') : '');
+      setDisplayDailyCost(loadedSettings.dailyCost > 0 ? loadedSettings.dailyCost.toLocaleString('vi-VN') : '');
       
       localStorage.setItem('cashflow_current_user', JSON.stringify(user));
     } else {
-      // Khi logout: Reset toàn bộ state về mặc định
       setSettings({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
       setTransactions([]);
       setActiveTab('dashboard');
@@ -56,7 +52,6 @@ const App: React.FC = () => {
     }
   }, [user]);
 
-  // Lưu dữ liệu vào localStorage khi có thay đổi
   useEffect(() => {
     if (user) {
       localStorage.setItem(`cashflow_settings_${user.username}`, JSON.stringify(settings));
@@ -105,54 +100,52 @@ const App: React.FC = () => {
     setSettings(prev => ({ ...prev, [settingKey]: numeric }));
   };
 
-  // Hàm đăng xuất được tối ưu hóa
+  const handleResetSettings = () => {
+    if (window.confirm("Bạn muốn reset các thiết lập mục tiêu về 0?")) {
+      setSettings(prev => ({ ...prev, initialCash: 0, initialBank: 0, dailyCost: 0 }));
+      setDisplayInitialCash('');
+      setDisplayInitialBank('');
+      setDisplayDailyCost('');
+    }
+  };
+
   const handleLogout = useCallback(() => {
-    const confirmed = window.confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?");
-    if (confirmed) {
-      // 1. Dọn dẹp session AI
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
       geminiService.resetSession();
-      // 2. Xóa khỏi localStorage ngay lập tức
       localStorage.removeItem('cashflow_current_user');
-      // 3. Cập nhật state để React re-render và hiển thị màn hình Auth
       setUser(null);
     }
   }, []);
 
-  // Nếu không có user, hiển thị màn hình Auth (Đăng nhập/Đăng ký)
   if (!user) {
     return <Auth onLogin={setUser} />;
   }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden">
+      {/* Header đồng bộ theo ảnh */}
       <header className="flex-none bg-white border-b border-slate-100 px-5 pt-[env(safe-area-inset-top,1rem)] h-[calc(4.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between z-50 glass-effect">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all ${user.role === UserRole.ADMIN ? 'bg-amber-500 shadow-amber-100' : 'bg-indigo-600 shadow-indigo-100'}`}>
-            <i className={`fas ${user.role === UserRole.ADMIN ? 'fa-user-shield' : 'fa-wallet'} text-white text-sm`}></i>
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+            <i className="fas fa-wallet text-white text-sm"></i>
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-[13px] font-black text-slate-800 uppercase tracking-tight truncate max-w-[140px] leading-tight mb-0.5">{user.name}</h1>
-            <span className={`text-[8px] w-fit font-black uppercase px-1.5 py-0.5 rounded-md ${user.role === UserRole.ADMIN ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                {user.role === UserRole.ADMIN ? 'Quản trị viên' : 'Thành viên'}
-            </span>
-          </div>
+          <h1 className="text-xl font-black text-slate-800 tracking-tighter">CASHFLOW</h1>
         </div>
         
         <div className="flex items-center gap-2">
           {user.role === UserRole.ADMIN && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600 border border-slate-100 hover:bg-slate-100'}`}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}
             >
               <i className="fas fa-users-cog text-xs"></i>
             </button>
           )}
           <button 
             onClick={handleLogout}
-            className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center active:scale-90 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-            title="Đăng xuất nhanh"
+            className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center active:scale-90 border border-slate-100 hover:text-rose-500 transition-all shadow-sm"
           >
-            <i className="fas fa-power-off text-xs"></i>
+            <i className="fas fa-sign-out-alt text-xs"></i>
           </button>
         </div>
       </header>
@@ -161,52 +154,50 @@ const App: React.FC = () => {
         <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-24'}`}>
           {activeTab === 'dashboard' && (
             <>
+               {/* THIẾT LẬP MỤC TIÊU */}
                <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
-                     <i className="fas fa-coins text-indigo-500"></i> Khởi tạo tài chính (Vốn đầu kỳ)
-                  </p>
+                  <div className="flex justify-between items-center mb-6">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                       THIẾT LẬP MỤC TIÊU
+                    </p>
+                    <button onClick={handleResetSettings} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-600 transition-colors">RESET</button>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">Tiền mặt hiện có</label>
-                      <div className="relative">
-                        <input 
-                          type="text" 
-                          inputMode="numeric"
-                          placeholder="0"
-                          value={displayInitialCash} 
-                          onChange={e => handleFormatInput(e.target.value, setDisplayInitialCash, 'initialCash')} 
-                          className="w-full bg-slate-50 p-4 pr-12 rounded-2xl text-sm font-black outline-none border border-transparent focus:border-amber-200 focus:bg-white transition-all"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">đ</span>
-                      </div>
+                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">TIỀN MẶT</label>
+                      <input 
+                        type="text" 
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={displayInitialCash} 
+                        onChange={e => handleFormatInput(e.target.value, setDisplayInitialCash, 'initialCash')} 
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white transition-all"
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">Tiền trong thẻ/ATM</label>
-                      <div className="relative">
-                        <input 
-                          type="text" 
-                          inputMode="numeric"
-                          placeholder="0"
-                          value={displayInitialBank} 
-                          onChange={e => handleFormatInput(e.target.value, setDisplayInitialBank, 'initialBank')} 
-                          className="w-full bg-slate-50 p-4 pr-12 rounded-2xl text-sm font-black outline-none border border-transparent focus:border-indigo-200 focus:bg-white transition-all"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">đ</span>
-                      </div>
+                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">TÀI KHOẢN</label>
+                      <input 
+                        type="text" 
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={displayInitialBank} 
+                        onChange={e => handleFormatInput(e.target.value, setDisplayInitialBank, 'initialBank')} 
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white transition-all"
+                      />
                     </div>
-                    <div className="col-span-2 space-y-2 mt-2 pt-4 border-t border-slate-50">
-                      <label className="text-[10px] text-slate-400 font-black uppercase text-center block w-full tracking-widest">Hạn mức chi tiêu mục tiêu mỗi ngày</label>
-                      <div className="relative max-w-[280px] mx-auto">
-                        <input 
-                          type="text" 
-                          inputMode="numeric"
-                          placeholder="Nhập số tiền..." 
-                          value={displayDailyCost} 
-                          onChange={e => handleFormatInput(e.target.value, setDisplayDailyCost, 'dailyCost')} 
-                          className="w-full bg-indigo-50/50 p-5 rounded-2xl text-2xl font-black text-indigo-700 outline-none border border-indigo-100 focus:bg-white transition-all text-center"
-                        />
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black uppercase">VND / Ngày</div>
+                    <div className="col-span-2 space-y-1.5">
+                      <div className="flex justify-between px-1">
+                        <label className="text-[10px] text-slate-400 font-black uppercase">HẠN MỨC / NGÀY</label>
+                        <span className="text-[10px] font-black text-indigo-500">{settings.dailyCost.toLocaleString('vi-VN')}đ</span>
                       </div>
+                      <input 
+                        type="text" 
+                        inputMode="numeric"
+                        placeholder="VD: 80000" 
+                        value={displayDailyCost} 
+                        onChange={e => handleFormatInput(e.target.value, setDisplayDailyCost, 'dailyCost')} 
+                        className="w-full bg-slate-50 p-5 rounded-2xl text-xl font-black text-slate-700 outline-none border border-transparent focus:bg-white transition-all"
+                      />
                     </div>
                   </div>
                </div>
@@ -262,9 +253,9 @@ const App: React.FC = () => {
 
       <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-6 pb-[env(safe-area-inset-bottom,1.5rem)] h-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-50 glass-effect">
         {[
-          { id: 'dashboard', icon: 'fa-th-large', label: 'Ví của tôi' },
-          { id: 'transactions', icon: 'fa-exchange-alt', label: 'Lịch sử' },
-          { id: 'ai', icon: 'fa-robot', label: 'Hỏi AI' }
+          { id: 'dashboard', icon: 'fa-chart-pie', label: 'TỔNG QUAN' },
+          { id: 'transactions', icon: 'fa-exchange-alt', label: 'GIAO DỊCH' },
+          { id: 'ai', icon: 'fa-pen-nib', label: 'TRỢ LÝ AI' }
         ].map(tab => (
           <button 
             key={tab.id}
@@ -273,7 +264,7 @@ const App: React.FC = () => {
               activeTab === tab.id ? 'text-indigo-600 scale-110' : 'text-slate-400'
             }`}
           >
-            {activeTab === tab.id && <span className="absolute -top-4 w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce"></span>}
+            {activeTab === tab.id && <span className="absolute -top-4 w-1.5 h-1.5 bg-indigo-600 rounded-full"></span>}
             <i className={`fas ${tab.icon} text-lg`}></i>
             <span className="text-[9px] font-black uppercase tracking-widest">{tab.label}</span>
           </button>
