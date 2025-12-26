@@ -11,7 +11,7 @@
     
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2489/2489756.png">
-    <title>CashFlow Cloud - Hệ Thống Tự Động Hóa</title>
+    <title>CashFlow Master - Tài Chính Thông Minh</title>
     
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,32 +20,50 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
         
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sar: env(safe-area-inset-right);
+            --sab: env(safe-area-inset-bottom);
+            --sal: env(safe-area-inset-left);
+        }
+
         body { 
           font-family: 'Inter', sans-serif; 
           overscroll-behavior-y: contain;
           -webkit-tap-highlight-color: transparent;
-          background-color: #f0f4f8;
+          background-color: #f8fafc;
           height: 100vh;
+          height: -webkit-fill-available;
           margin: 0;
           overflow: hidden;
         }
 
-        #root { height: 100%; }
+        #root {
+          height: 100%;
+        }
 
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          display: flex;
-          animation: marquee 30s linear infinite;
-          width: max-content;
-        }
+        .active-scale:active { transform: scale(0.96); }
         
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .glass-effect {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         
-        input { border: none; outline: none; }
+        /* Smooth scrolling for components */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
     </style>
     
     <script>

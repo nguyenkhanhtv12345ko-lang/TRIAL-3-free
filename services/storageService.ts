@@ -2,120 +2,105 @@
 import { Transaction, Settings, User } from "../types";
 
 /**
- * CLOUD ENGINE V5.0 - FULLY AUTOMATED ONLINE SYSTEM
- * Hệ thống giả lập Backend Real-time chuyên nghiệp.
+ * CLOUD STORAGE ENGINE V2.0
+ * Mô phỏng một Backend thực thụ với Database tập trung
  */
-class CloudEngine {
-  private mockLatency = 600;
-  private activityLogs: { id: string, action: string, status: string, time: string }[] = [];
+export const storageService = {
+  // Cấu hình giả lập
+  config: {
+    apiUrl: "https://api.cashflow-master.cloud/v2",
+    latency: 1200, // ms
+  },
 
-  private logActivity(action: string, status: 'PENDING' | 'SUCCESS' | 'ERROR') {
-    const log = {
-      id: Math.random().toString(36).substr(2, 5).toUpperCase(),
-      action,
-      status,
-      time: new Date().toLocaleTimeString()
-    };
-    this.activityLogs = [log, ...this.activityLogs].slice(0, 5);
-    // Phát sự kiện để UI cập nhật log
-    window.dispatchEvent(new CustomEvent('cloud_activity', { detail: this.activityLogs }));
-  }
+  async simulateNetwork(customLatency?: number) {
+    const l = customLatency !== undefined ? customLatency : this.config.latency;
+    return new Promise(resolve => setTimeout(resolve, Math.random() * 500 + l));
+  },
 
-  // LẤY DỮ LIỆU THỊ TRƯỜNG THẬT (ONLINE)
-  async getLiveMarketData() {
-    this.logActivity('GET /market-rates', 'PENDING');
-    try {
-      const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,binancecoin&vs_currencies=vnd');
-      const data = await res.json();
-      this.logActivity('GET /market-rates', 'SUCCESS');
-      return data;
-    } catch (e) {
-      this.logActivity('GET /market-rates', 'ERROR');
-      return null;
-    }
-  }
+  // HỆ THỐNG QUẢN TRỊ SERVER (GLOBAL STATE)
+  getGlobalConfig() {
+    const config = localStorage.getItem('cashflow_system_config');
+    return config ? JSON.parse(config) : { aiActive: false, serverStatus: 'online' };
+  },
 
-  // ĐỒNG BỘ USER TRỰC TUYẾN
+  setGlobalConfig(config: { aiActive: boolean, serverStatus: string }) {
+    localStorage.setItem('cashflow_system_config', JSON.stringify(config));
+  },
+
+  // QUẢN LÝ TÀI KHOẢN (CENTRAL DB)
   async getUsers(): Promise<User[]> {
-    const data = localStorage.getItem('db_users');
+    await this.simulateNetwork(500); // Admin load nhanh hơn tí
+    const data = localStorage.getItem('cashflow_users');
     return data ? JSON.parse(data) : [];
-  }
+  },
 
   async saveUser(user: User) {
-    this.logActivity(`PUSH /user/${user.username}`, 'PENDING');
+    await this.simulateNetwork();
     const users = await this.getUsers();
-    const index = users.findIndex(u => u.username === user.username);
-    if (index > -1) users[index] = user;
-    else users.push(user);
-    localStorage.setItem('db_users', JSON.stringify(users));
-    this.logActivity(`PUSH /user/${user.username}`, 'SUCCESS');
-  }
+    users.push(user);
+    localStorage.setItem('cashflow_users', JSON.stringify(users));
+  },
 
-  // TỰ ĐỘNG HÓA FETCH DỮ LIỆU (POLLING SIMULATION)
-  async fetchUserData(username: string) {
-    this.logActivity(`FETCH /data/${username}`, 'PENDING');
-    await new Promise(r => setTimeout(r, this.mockLatency));
-    const trans = localStorage.getItem(`db_transactions_${username}`);
-    const settings = localStorage.getItem(`db_settings_${username}`);
-    this.logActivity(`FETCH /data/${username}`, 'SUCCESS');
+  async updateUser(updatedUser: User) {
+    await this.simulateNetwork(1000);
+    const users = await this.getUsers();
+    const updated = users.map(u => u.username === updatedUser.username ? updatedUser : u);
+    localStorage.setItem('cashflow_users', JSON.stringify(updated));
+    return true;
+  },
+
+  async deleteUser(username: string) {
+    await this.simulateNetwork(1000);
+    const users = await this.getUsers();
+    const updated = users.filter(u => u.username !== username);
+    localStorage.setItem('cashflow_users', JSON.stringify(updated));
+    // Dọn dẹp data của user đó luôn
+    localStorage.removeItem(`cloud_db_transactions_${username}`);
+    localStorage.removeItem(`cloud_db_settings_${username}`);
+    localStorage.removeItem(`last_cloud_sync_${username}`);
+    return true;
+  },
+
+  // QUẢN LÝ DỮ LIỆU CLOUD (DỮ LIỆU ĐI THEO USER_ID TRÊN SERVER)
+  async fetchUserData(username: string): Promise<{ transactions: Transaction[], settings: Settings }> {
+    console.log(`[CloudAPI] Fetching data for user: ${username}`);
+    await this.simulateNetwork();
+    
+    const trans = localStorage.getItem(`cloud_db_transactions_${username}`);
+    const settings = localStorage.getItem(`cloud_db_settings_${username}`);
+    
     return {
       transactions: trans ? JSON.parse(trans) : [],
-      settings: settings ? JSON.parse(settings) : null
+      settings: settings ? JSON.parse(settings) : { userId: username, initialCash: 0, initialBank: 0, dailyCost: 0 }
     };
-  }
+  },
 
-  // TỰ ĐỘNG HÓA PUSH DỮ LIỆU (IMMEDIATE SYNC)
   async pushUserData(username: string, transactions: Transaction[], settings: Settings) {
-    this.logActivity(`SYNC /cloud-db/${username}`, 'PENDING');
-    localStorage.setItem(`db_transactions_${username}`, JSON.stringify(transactions));
-    localStorage.setItem(`db_settings_${username}`, JSON.stringify(settings));
-    localStorage.setItem(`db_last_sync_${username}`, new Date().toISOString());
-    this.logActivity(`SYNC /cloud-db/${username}`, 'SUCCESS');
+    console.log(`[CloudAPI] Pushing update to server for: ${username}`);
+    await this.simulateNetwork();
+    
+    localStorage.setItem(`cloud_db_transactions_${username}`, JSON.stringify(transactions));
+    localStorage.setItem(`cloud_db_settings_${username}`, JSON.stringify(settings));
+    localStorage.setItem(`last_cloud_sync_${username}`, new Date().toISOString());
+    return { status: "success", timestamp: new Date().toISOString() };
+  },
+
+  getLastSync(username: string): string {
+    return localStorage.getItem(`last_cloud_sync_${username}`) || "Chưa đồng bộ";
+  },
+
+  // ADMIN SYSTEM COMMANDS
+  async wipeAllData() {
+    await this.simulateNetwork(2000);
+    const users = await this.getUsers();
+    users.forEach(user => {
+      localStorage.removeItem(`cloud_db_transactions_${user.username}`);
+      localStorage.removeItem(`cloud_db_settings_${user.username}`);
+      localStorage.removeItem(`last_cloud_sync_${user.username}`);
+    });
+    localStorage.removeItem('cashflow_users');
+    localStorage.removeItem('cashflow_current_user');
+    localStorage.removeItem('cashflow_system_config');
     return true;
   }
-
-  // CÁC HÀM QUẢN TRỊ
-  async deleteUser(username: string) {
-    this.logActivity(`DELETE /user/${username}`, 'PENDING');
-    const users = await this.getUsers();
-    localStorage.setItem('db_users', JSON.stringify(users.filter(u => u.username !== username)));
-    localStorage.removeItem(`db_transactions_${username}`);
-    this.logActivity(`DELETE /user/${username}`, 'SUCCESS');
-  }
-
-  async wipeAllData() {
-    this.logActivity('SYSTEM_WIPE', 'PENDING');
-    localStorage.clear();
-    this.logActivity('SYSTEM_WIPE', 'SUCCESS');
-  }
-
-  getGlobalConfig() {
-    const data = localStorage.getItem('db_sys_config');
-    return data ? JSON.parse(data) : { aiActive: true, maintenance: false };
-  }
-
-  setGlobalConfig(config: any) {
-    localStorage.setItem('db_sys_config', JSON.stringify(config));
-  }
-
-  generateSyncPackage(username: string) {
-    return btoa(unescape(encodeURIComponent(JSON.stringify({
-      username,
-      data: localStorage.getItem(`db_transactions_${username}`)
-    }))));
-  }
-
-  async importSyncPackage(code: string) {
-    this.logActivity('IMPORT_PACKAGE', 'PENDING');
-    try {
-      const decoded = JSON.parse(decodeURIComponent(escape(atob(code))));
-      this.logActivity('IMPORT_PACKAGE', 'SUCCESS');
-      return true;
-    } catch (e) {
-      this.logActivity('IMPORT_PACKAGE', 'ERROR');
-      return false;
-    }
-  }
-}
-
-export const storageService = new CloudEngine();
+};

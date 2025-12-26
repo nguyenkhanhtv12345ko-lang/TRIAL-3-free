@@ -2,43 +2,12 @@
 import { GoogleGenAI, Modality, Chat, GenerateContentResponse, Type, FunctionDeclaration } from "@google/genai";
 import { Transaction, FinancialStats } from "../types";
 
-// Fix: Implement manual base64 decoding following guidelines
-function decode(base64: string) {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}
-
-// Fix: Implement PCM audio decoding following guidelines
-async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
-  }
-  return buffer;
-}
-
 export class GeminiService {
   private chatSession: Chat | null = null;
 
   private getAI() {
-    // Fix: Correct initialization using named parameter and strictly process.env.API_KEY directly
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = process?.env?.API_KEY || "";
+    return new GoogleGenAI({ apiKey });
   }
 
   private readonly addTransactionTool: FunctionDeclaration = {
@@ -102,7 +71,6 @@ export class GeminiService {
             }
           }
         }
-        // Accessing .text property as per guidelines
         const text = c.text;
         if (text) yield { type: 'text', text };
       }
@@ -116,17 +84,10 @@ export class GeminiService {
   async sendFunctionResponse(callId: string, name: string, response: any) {
     if (!this.chatSession) return;
     try {
-      // Fix: Send tool response using Part structure within the message parameter
       await this.chatSession.sendMessage({
-        message: [
-          {
-            functionResponse: {
-              name: name,
-              id: callId,
-              response: response
-            }
-          }
-        ]
+        message: JSON.stringify({
+          functionResponses: [{ id: callId, name: name, response: response }]
+        })
       });
     } catch (e) {
       console.error("Function Response Error:", e);
@@ -143,9 +104,7 @@ export class GeminiService {
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' }
-            },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
           },
         },
       });
@@ -155,16 +114,16 @@ export class GeminiService {
   }
 
   private async playAudio(base64: string) {
-    // Fix: Implementation of PCM audio playback using AudioContext and guideline helper functions
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    const audioBuffer = await decodeAudioData(
-      decode(base64),
-      ctx,
-      24000,
-      1
-    );
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    const dataInt16 = new Int16Array(bytes.buffer);
+    const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
+    const channelData = buffer.getChannelData(0);
+    for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
     const source = ctx.createBufferSource();
-    source.buffer = audioBuffer;
+    source.buffer = buffer;
     source.connect(ctx.destination);
     source.start();
   }

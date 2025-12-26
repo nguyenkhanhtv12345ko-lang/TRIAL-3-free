@@ -63,8 +63,7 @@ const AdminPanel: React.FC<Props> = ({ onClose }) => {
 
     setIsProcessing(true);
     const updated: User = { ...editingUser, name: editName, password: editPassword };
-    // Fix: storageService.saveUser handles both create and update operations in the CloudEngine implementation
-    await storageService.saveUser(updated);
+    await storageService.updateUser(updated);
     await loadData();
     setIsProcessing(false);
     setEditingUser(null);
