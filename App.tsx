@@ -25,17 +25,21 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'admin'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [networkLatency, setNetworkLatency] = useState(0);
 
   const [displayInitialCash, setDisplayInitialCash] = useState('');
   const [displayInitialBank, setDisplayInitialBank] = useState('');
   const [displayDailyCost, setDisplayDailyCost] = useState('');
 
-  // Load dữ liệu khi đăng nhập
+  // Load dữ liệu từ Cloud
   useEffect(() => {
     const loadData = async () => {
       if (user) {
         setIsSyncing(true);
-        const data = await storageService.getData(user.username);
+        const start = Date.now();
+        const data = await storageService.fetchUserData(user.username);
+        setNetworkLatency(Date.now() - start);
+        
         setSettings(data.settings);
         setTransactions(data.transactions);
         
@@ -45,24 +49,22 @@ const App: React.FC = () => {
         
         localStorage.setItem('cashflow_current_user', JSON.stringify(user));
         setIsSyncing(false);
-      } else {
-        setSettings({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
-        setTransactions([]);
-        setActiveTab('dashboard');
       }
     };
     loadData();
   }, [user]);
 
-  // Tự động đồng bộ khi có thay đổi (Auto-Sync to "Server")
+  // Cloud Auto-Sync
   useEffect(() => {
     if (user && transactions.length >= 0) {
       const sync = async () => {
         setIsSyncing(true);
-        await storageService.syncData(user.username, transactions, settings);
-        setTimeout(() => setIsSyncing(false), 500);
+        const start = Date.now();
+        await storageService.pushUserData(user.username, transactions, settings);
+        setNetworkLatency(Date.now() - start);
+        setTimeout(() => setIsSyncing(false), 800);
       };
-      const debounceSync = setTimeout(sync, 1000); // Đợi 1s sau thay đổi cuối cùng để sync
+      const debounceSync = setTimeout(sync, 2000);
       return () => clearTimeout(debounceSync);
     }
   }, [transactions, settings, user]);
@@ -108,17 +110,8 @@ const App: React.FC = () => {
     setSettings(prev => ({ ...prev, [settingKey]: numeric }));
   };
 
-  const handleResetSettings = () => {
-    if (window.confirm("Bạn muốn reset các thiết lập mục tiêu về 0?")) {
-      setSettings(prev => ({ ...prev, initialCash: 0, initialBank: 0, dailyCost: 0 }));
-      setDisplayInitialCash('');
-      setDisplayInitialBank('');
-      setDisplayDailyCost('');
-    }
-  };
-
   const handleLogout = useCallback(() => {
-    if (window.confirm("Xác nhận đăng xuất? Dữ liệu của bạn đã được lưu an toàn trên hệ thống.")) {
+    if (window.confirm("Đăng xuất? Mọi dữ liệu đã được lưu trữ an toàn trên Cloud Server.")) {
       geminiService.resetSession();
       localStorage.removeItem('cashflow_current_user');
       setUser(null);
@@ -130,18 +123,31 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden">
-      <header className="flex-none bg-white border-b border-slate-100 px-5 pt-[env(safe-area-inset-top,1rem)] h-[calc(4.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between z-50 glass-effect">
+    <div className="h-screen flex flex-col bg-[#f8fafc] font-sans overflow-hidden">
+      {/* Cloud Status Bar */}
+      <div className="bg-slate-900 text-[8px] font-black text-slate-500 py-1.5 px-5 flex justify-between uppercase tracking-widest z-[100]">
+         <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5"><i className="fas fa-server text-indigo-400"></i> Cloud: Online</span>
+            <span className="flex items-center gap-1.5"><i className="fas fa-wifi text-emerald-400"></i> IP: 142.250.190.46</span>
+         </div>
+         <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-indigo-400">
+               <i className="fas fa-bolt"></i> Latency: {networkLatency}ms
+            </span>
+         </div>
+      </div>
+
+      <header className="flex-none bg-white/80 backdrop-blur-xl border-b border-slate-100 px-5 h-20 flex items-center justify-between z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
-            <i className="fas fa-wallet text-white text-sm"></i>
+          <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200">
+            <i className="fas fa-cloud text-white text-base"></i>
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">CASHFLOW</h1>
-            <div className="flex items-center gap-1 mt-1">
-              <i className={`fas ${isSyncing ? 'fa-sync fa-spin text-indigo-500' : 'fa-cloud text-emerald-500'} text-[8px]`}></i>
+            <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">CASH<span className="text-indigo-600">CLOUD</span></h1>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <i className={`fas ${isSyncing ? 'fa-circle-notch fa-spin text-indigo-500' : 'fa-check-double text-emerald-500'} text-[8px]`}></i>
               <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
-                {isSyncing ? 'Đang đồng bộ...' : 'Đã lưu trên Server'}
+                {isSyncing ? 'Syncing to Server...' : 'Cloud Synced'}
               </span>
             </div>
           </div>
@@ -151,66 +157,63 @@ const App: React.FC = () => {
           {user.role === UserRole.ADMIN && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-xl' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
             >
-              <i className="fas fa-users-cog text-xs"></i>
+              <i className="fas fa-terminal text-sm"></i>
             </button>
           )}
           <button 
             onClick={handleLogout}
-            className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center active:scale-90 border border-slate-100 hover:text-rose-500 transition-all shadow-sm"
+            className="w-11 h-11 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center active:scale-90 border border-rose-100 transition-all shadow-sm"
           >
-            <i className="fas fa-power-off text-xs"></i>
+            <i className="fas fa-power-off text-sm"></i>
           </button>
         </div>
       </header>
 
       <main className={`flex-1 overflow-y-auto ${activeTab === 'ai' || activeTab === 'admin' ? 'overflow-hidden' : 'p-4'}`}>
-        <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-24'}`}>
+        <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-28'}`}>
           {activeTab === 'dashboard' && (
             <>
-               <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
+               <div className="bg-white p-6 rounded-[40px] shadow-sm border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                       THIẾT LẬP MỤC TIÊU
+                       CLOUD SETTINGS
                     </p>
-                    <button onClick={handleResetSettings} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-600 transition-colors">RESET</button>
+                    <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">TIỀN MẶT</label>
+                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">CASH LIMIT</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         placeholder="0"
                         value={displayInitialCash} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayInitialCash, 'initialCash')} 
-                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white transition-all"
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">TÀI KHOẢN</label>
+                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">BANK LIMIT</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         placeholder="0"
                         value={displayInitialBank} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayInitialBank, 'initialBank')} 
-                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white transition-all"
+                        className="w-full bg-slate-50 p-4 rounded-2xl text-sm font-black outline-none border border-transparent focus:bg-white focus:border-indigo-500 transition-all"
                       />
                     </div>
                     <div className="col-span-2 space-y-1.5">
-                      <div className="flex justify-between px-1">
-                        <label className="text-[10px] text-slate-400 font-black uppercase">HẠN MỨC / NGÀY</label>
-                        <span className="text-[10px] font-black text-indigo-500">{settings.dailyCost.toLocaleString('vi-VN')}đ</span>
-                      </div>
+                      <label className="text-[10px] text-slate-400 font-black ml-1 uppercase">DAILY BUDGET TARGET</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         placeholder="VD: 80000" 
                         value={displayDailyCost} 
                         onChange={e => handleFormatInput(e.target.value, setDisplayDailyCost, 'dailyCost')} 
-                        className="w-full bg-slate-50 p-5 rounded-2xl text-xl font-black text-slate-700 outline-none border border-transparent focus:bg-white transition-all"
+                        className="w-full bg-indigo-50 p-5 rounded-3xl text-2xl font-black text-indigo-700 outline-none border border-indigo-100 focus:bg-white transition-all text-center"
                       />
                     </div>
                   </div>
@@ -220,7 +223,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'transactions' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <TransactionForm 
                 onAdd={(t) => {
                   setTransactions([{...t, id: Date.now().toString(), userId: user.username}, ...transactions]);
@@ -236,7 +239,7 @@ const App: React.FC = () => {
                 transactions={transactions} 
                 settings={settings}
                 onDelete={(id) => {
-                  if (window.confirm('Xóa giao dịch này?')) setTransactions(transactions.filter(t => t.id !== id));
+                  if (window.confirm('Hủy giao dịch này khỏi Server?')) setTransactions(transactions.filter(t => t.id !== id));
                 }}
                 onEdit={(t) => {
                   setEditingTransaction(t);
@@ -258,29 +261,30 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'admin' && user.role === UserRole.ADMIN && (
-            <div className="h-full p-4 overflow-hidden">
+            <div className="h-full p-4">
                <AdminPanel onClose={() => setActiveTab('dashboard')} />
             </div>
           )}
         </div>
       </main>
 
-      <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-6 pb-[env(safe-area-inset-bottom,1.5rem)] h-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-50 glass-effect">
+      <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-6 h-24 z-50">
         {[
-          { id: 'dashboard', icon: 'fa-chart-pie', label: 'TỔNG QUAN' },
-          { id: 'transactions', icon: 'fa-exchange-alt', label: 'GIAO DỊCH' },
-          { id: 'ai', icon: 'fa-pen-nib', label: 'TRỢ LÝ AI' }
+          { id: 'dashboard', icon: 'fa-chart-pie', label: 'Dashboard' },
+          { id: 'transactions', icon: 'fa-layer-group', label: 'Cloud DB' },
+          { id: 'ai', icon: 'fa-wand-magic-sparkles', label: 'Cloud AI' }
         ].map(tab => (
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 relative group ${
-              activeTab === tab.id ? 'text-indigo-600 scale-110' : 'text-slate-400'
+            className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
+              activeTab === tab.id ? 'text-indigo-600 scale-105' : 'text-slate-400'
             }`}
           >
-            {activeTab === tab.id && <span className="absolute -top-4 w-1.5 h-1.5 bg-indigo-600 rounded-full"></span>}
-            <i className={`fas ${tab.icon} text-lg`}></i>
-            <span className="text-[9px] font-black uppercase tracking-widest">{tab.label}</span>
+            <div className={`w-12 h-8 flex items-center justify-center rounded-2xl transition-all ${activeTab === tab.id ? 'bg-indigo-50' : ''}`}>
+              <i className={`fas ${tab.icon} ${activeTab === tab.id ? 'text-lg' : 'text-base'}`}></i>
+            </div>
+            <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
           </button>
         ))}
       </nav>

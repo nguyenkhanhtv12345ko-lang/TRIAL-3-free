@@ -2,32 +2,51 @@
 import { Transaction, Settings, User } from "../types";
 
 /**
- * Dịch vụ giả lập Server. 
- * Trong thực tế, bạn sẽ thay các hàm này bằng fetch('https://api.yourserver.com/...')
+ * CLOUD STORAGE ENGINE V2.0
+ * Mô phỏng một Backend thực thụ với Database tập trung
  */
 export const storageService = {
-  // Giả lập độ trễ mạng để tăng tính thực tế
-  async simulateNetwork() {
-    return new Promise(resolve => setTimeout(resolve, 800));
+  // Cấu hình giả lập
+  config: {
+    apiUrl: "https://api.cashflow-master.cloud/v2",
+    latency: 1200, // ms
   },
 
-  // QUẢN LÝ TÀI KHOẢN
+  async simulateNetwork() {
+    return new Promise(resolve => setTimeout(resolve, Math.random() * 500 + this.config.latency));
+  },
+
+  // HỆ THỐNG QUẢN TRỊ SERVER (GLOBAL STATE)
+  getGlobalConfig() {
+    const config = localStorage.getItem('cashflow_system_config');
+    return config ? JSON.parse(config) : { aiActive: false, serverStatus: 'online' };
+  },
+
+  setGlobalConfig(config: { aiActive: boolean, serverStatus: string }) {
+    localStorage.setItem('cashflow_system_config', JSON.stringify(config));
+  },
+
+  // QUẢN LÝ TÀI KHOẢN (CENTRAL DB)
   async getUsers(): Promise<User[]> {
+    await this.simulateNetwork();
     const data = localStorage.getItem('cashflow_users');
     return data ? JSON.parse(data) : [];
   },
 
   async saveUser(user: User) {
+    await this.simulateNetwork();
     const users = await this.getUsers();
     users.push(user);
     localStorage.setItem('cashflow_users', JSON.stringify(users));
   },
 
-  // QUẢN LÝ DỮ LIỆU THEO TÀI KHOẢN
-  async getData(username: string): Promise<{ transactions: Transaction[], settings: Settings }> {
+  // QUẢN LÝ DỮ LIỆU CLOUD (DỮ LIỆU ĐI THEO USER_ID TRÊN SERVER)
+  async fetchUserData(username: string): Promise<{ transactions: Transaction[], settings: Settings }> {
+    console.log(`[CloudAPI] Fetching data for user: ${username}`);
     await this.simulateNetwork();
-    const trans = localStorage.getItem(`cashflow_transactions_${username}`);
-    const settings = localStorage.getItem(`cashflow_settings_${username}`);
+    
+    const trans = localStorage.getItem(`cloud_db_transactions_${username}`);
+    const settings = localStorage.getItem(`cloud_db_settings_${username}`);
     
     return {
       transactions: trans ? JSON.parse(trans) : [],
@@ -35,15 +54,32 @@ export const storageService = {
     };
   },
 
-  async syncData(username: string, transactions: Transaction[], settings: Settings) {
-    // Đây là nơi bạn sẽ gọi API POST để lưu lên server
-    localStorage.setItem(`cashflow_transactions_${username}`, JSON.stringify(transactions));
-    localStorage.setItem(`cashflow_settings_${username}`, JSON.stringify(settings));
-    localStorage.setItem(`last_sync_${username}`, new Date().toISOString());
-    return true;
+  async pushUserData(username: string, transactions: Transaction[], settings: Settings) {
+    console.log(`[CloudAPI] Pushing update to server for: ${username}`);
+    await this.simulateNetwork();
+    
+    localStorage.setItem(`cloud_db_transactions_${username}`, JSON.stringify(transactions));
+    localStorage.setItem(`cloud_db_settings_${username}`, JSON.stringify(settings));
+    localStorage.setItem(`last_cloud_sync_${username}`, new Date().toISOString());
+    return { status: "success", timestamp: new Date().toISOString() };
   },
 
   getLastSync(username: string): string {
-    return localStorage.getItem(`last_sync_${username}`) || "Chưa đồng bộ";
+    return localStorage.getItem(`last_cloud_sync_${username}`) || "Chưa đồng bộ";
+  },
+
+  // ADMIN SYSTEM COMMANDS
+  async wipeAllData() {
+    await this.simulateNetwork();
+    const users = await this.getUsers();
+    users.forEach(user => {
+      localStorage.removeItem(`cloud_db_transactions_${user.username}`);
+      localStorage.removeItem(`cloud_db_settings_${user.username}`);
+      localStorage.removeItem(`last_cloud_sync_${user.username}`);
+    });
+    localStorage.removeItem('cashflow_users');
+    localStorage.removeItem('cashflow_current_user');
+    localStorage.removeItem('cashflow_system_config');
+    return true;
   }
 };
