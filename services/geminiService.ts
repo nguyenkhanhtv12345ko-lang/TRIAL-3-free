@@ -56,9 +56,9 @@ export class GeminiService {
       
       QUY TẮC QUAN TRỌNG:
       1. Nếu người dùng mô tả một sự việc có tính chất tài chính (ví dụ: "mình vừa ăn phở 50k", "vừa được thưởng 1 triệu"), hãy LUÔN gọi hàm 'add_transaction' để ghi lại.
-      2. Sau khi gọi hàm thành công, hãy xác nhận lại với người dùng một cách thân thiện.
-      3. Nếu thông tin thiếu (ví dụ: "mình mới tiêu tiền"), hãy hỏi lại số tiền cụ thể.
-      4. Phán đoán thông minh: "mất", "trả", "mua", "chi" -> Chi; "nhận", "thưởng", "lương", "đòi nợ được" -> Thu.
+      2. Sau khi thực hiện lệnh gọi hàm, hãy thông báo cụ thể cho người dùng biết bạn đã ghi nhận thông tin gì (Số tiền, Nội dung, Loại giao dịch).
+      3. Hãy luôn thân thiện, ngắn gọn và chuyên nghiệp.
+      4. Phán đoán thông minh: "mất", "trả", "mua", "chi", "đóng tiền" -> Chi; "nhận", "thưởng", "lương", "lời", "thu" -> Thu.
     `;
 
     this.chatSession = ai.chats.create({
@@ -79,11 +79,9 @@ export class GeminiService {
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
       
-      // Nếu có lệnh gọi hàm (Tool Call)
       if (c.candidates?.[0]?.content?.parts) {
         for (const part of c.candidates[0].content.parts) {
           if (part.functionCall) {
-             // Chúng ta sẽ trả về một object đặc biệt để component xử lý
              yield { type: 'function_call', call: part.functionCall };
           }
         }
@@ -134,14 +132,18 @@ export class GeminiService {
   }
 
   private async playAudioFromBase64(base64: string) {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    const bytes = this.decode(base64);
-    const audioBuffer = await this.decodeAudioData(bytes, audioContext, 24000, 1);
-    
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    source.start();
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const bytes = this.decode(base64);
+      const audioBuffer = await this.decodeAudioData(bytes, audioContext, 24000, 1);
+      
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.start();
+    } catch (e) {
+      console.warn("Audio playback failed", e);
+    }
   }
 
   private decode(base64: string) {

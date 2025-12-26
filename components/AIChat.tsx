@@ -67,9 +67,10 @@ const AIChat: React.FC<Props> = ({ transactions, stats, onAddTransaction }) => {
             // Gửi kết quả lại cho AI để nó biết đã thành công
             await geminiService.sendFunctionResponse(call.id, call.name, { status: "success", message: "Giao dịch đã được lưu." });
             
+            // Thông báo cập nhật thành công theo yêu cầu
             setMessages(prev => [...prev, { 
               role: 'system', 
-              text: `Đã tự động thêm: ${args.transaction_type} ${args.amount.toLocaleString()}đ - ${args.content}` 
+              text: `✅ ĐÃ CẬP NHẬT: ${args.transaction_type} ${args.amount.toLocaleString()}đ cho "${args.content}"` 
             }]);
           }
         }
@@ -92,7 +93,7 @@ const AIChat: React.FC<Props> = ({ transactions, stats, onAddTransaction }) => {
         const newMessages = [...prev];
         const last = newMessages[newMessages.length - 1];
         if (last && last.role === 'ai') {
-          newMessages[newMessages.length - 1] = { role: 'ai', text: 'Tôi gặp chút vấn đề khi xử lý yêu cầu.' };
+          newMessages[newMessages.length - 1] = { role: 'ai', text: 'Tôi gặp chút vấn đề khi kết nối. Vui lòng thử lại sau.' };
         }
         return newMessages;
       });
@@ -124,7 +125,7 @@ const AIChat: React.FC<Props> = ({ transactions, stats, onAddTransaction }) => {
                </div>
             </div>
          </div>
-         <div className="text-[10px] bg-black/20 px-2 py-1 rounded-full text-indigo-200">v2.2</div>
+         <div className="text-[10px] bg-black/20 px-2 py-1 rounded-full text-indigo-200">v2.3</div>
       </div>
 
       {/* Messages */}
@@ -132,8 +133,8 @@ const AIChat: React.FC<Props> = ({ transactions, stats, onAddTransaction }) => {
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : m.role === 'system' ? 'justify-center' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
             {m.role === 'system' ? (
-              <div className="bg-indigo-50 text-indigo-600 text-[10px] font-bold px-4 py-1.5 rounded-full border border-indigo-100 uppercase tracking-tighter">
-                 <i className="fas fa-check-double mr-1"></i> {m.text}
+              <div className="bg-emerald-50 text-emerald-700 text-[11px] font-bold px-4 py-2 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-2">
+                 <i className="fas fa-check-circle"></i> {m.text}
               </div>
             ) : (
               <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm relative group ${
@@ -179,7 +180,7 @@ const AIChat: React.FC<Props> = ({ transactions, stats, onAddTransaction }) => {
           </button>
         </form>
         <p className="text-[10px] text-center text-slate-400 mt-2 font-medium italic">
-          Gõ mô tả giao dịch của bạn, AI sẽ tự động cập nhật vào hệ thống.
+          AI sẽ tự động tách thông tin và cập nhật vào sổ thu chi của bạn.
         </p>
       </div>
     </div>
