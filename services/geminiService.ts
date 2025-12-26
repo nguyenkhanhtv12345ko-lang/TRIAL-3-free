@@ -37,8 +37,8 @@ export class GeminiService {
   private chatSession: Chat | null = null;
 
   private getAI() {
-    // Fix: Correct initialization using named parameter and process.env.API_KEY
-    return new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+    // Fix: Correct initialization using named parameter and strictly process.env.API_KEY directly
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
 
   private readonly addTransactionTool: FunctionDeclaration = {
