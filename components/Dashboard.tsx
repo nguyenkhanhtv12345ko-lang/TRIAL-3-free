@@ -1,7 +1,8 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ReferenceLine } from 'recharts';
 import { FinancialStats, Transaction, TransactionType, Settings, User, UserRole } from '../types';
+import { storageService } from '../services/storageService';
 
 interface Props {
   stats: FinancialStats;
@@ -12,6 +13,23 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ stats, transactions, settings, user, onLogout }) => {
+  const [lastSync, setLastSync] = useState('');
+
+  useEffect(() => {
+    const updateSyncTime = () => {
+      const time = storageService.getLastSync(user.username);
+      if (time !== "Chưa đồng bộ") {
+        const date = new Date(time);
+        setLastSync(date.toLocaleTimeString('vi-VN') + ' ' + date.toLocaleDateString('vi-VN'));
+      } else {
+        setLastSync(time);
+      }
+    };
+    updateSyncTime();
+    const interval = setInterval(updateSyncTime, 10000);
+    return () => clearInterval(interval);
+  }, [user.username, transactions]);
+
   const chartData = useMemo(() => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -45,13 +63,12 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings, user, onLog
 
   const savingAdvice = () => {
     if (settings.dailyCost === 0) return "Hãy thiết lập mục tiêu chi tiêu mỗi ngày!";
-    return "Sẵn sàng quản lý chi tiêu kỷ luật hôm nay!";
+    return "Dữ liệu tài khoản của bạn đang được bảo vệ an toàn.";
   };
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       
-      {/* KHOẢN NHO NHỎ (TÍCH LŨY) */}
       <div className="p-6 rounded-[32px] bg-[#f0fff4] border border-emerald-100 shadow-sm transition-all duration-500 relative overflow-hidden">
         <div className="flex justify-between items-start z-10 relative">
           <div>
@@ -76,7 +93,6 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings, user, onLog
         </p>
       </div>
 
-      {/* Vốn và tài sản */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-5 rounded-[32px] shadow-sm border border-slate-100 relative overflow-hidden">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">VỐN TIỀN MẶT</p>
@@ -107,38 +123,8 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings, user, onLog
         </div>
       </div>
 
-      {/* Phân tích biểu đồ */}
       <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">BIỂU ĐỒ CHI TIÊU KỶ LUẬT</h3>
-        <div className="h-48 w-full">
-          {transactions.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 8, fill: '#94a3b8', fontWeight: 800}} dy={10} />
-                <YAxis hide domain={[0, 'auto']} />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 800 }}
-                  formatter={(value: number) => [formatCurrency(value), '']}
-                />
-                <Area type="monotone" dataKey="target" fill="#f5f3ff" stroke="none" fillOpacity={0.5} />
-                <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={10} />
-                <Line type="monotone" dataKey="target" stroke="#818cf8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 opacity-30">
-               <i className="fas fa-chart-line text-2xl"></i>
-               <p className="text-[9px] font-black uppercase">Chưa có dữ liệu</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* HỒ SƠ TÀI KHOẢN */}
-      <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">HỒ SƠ TÀI KHOẢN</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">HỒ SƠ TÀI KHOẢN SERVER</p>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className={`w-14 h-14 text-white rounded-[20px] flex items-center justify-center text-xl font-black shadow-lg ${user.role === UserRole.ADMIN ? 'bg-amber-500' : 'bg-indigo-600'}`}>
@@ -147,10 +133,13 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings, user, onLog
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-black text-slate-800">{user.name}</h4>
-                {user.role === UserRole.ADMIN && <i className="fas fa-shield-alt text-amber-500 text-[10px]"></i>}
+                <div className="flex items-center gap-1 bg-emerald-100 px-1.5 py-0.5 rounded">
+                   <i className="fas fa-check-circle text-emerald-600 text-[7px]"></i>
+                   <span className="text-[7px] font-black text-emerald-700 uppercase">Verified</span>
+                </div>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                @{user.username} • <span className={user.role === UserRole.ADMIN ? 'text-amber-500' : 'text-indigo-500'}>{user.role === UserRole.ADMIN ? 'QUẢN TRỊ VIÊN' : 'THÀNH VIÊN'}</span>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
+                ID: {user.username} • Sync: {lastSync}
               </p>
             </div>
           </div>

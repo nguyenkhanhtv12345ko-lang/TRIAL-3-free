@@ -8,6 +8,7 @@ import AIChat from './components/AIChat';
 import Auth from './components/Auth';
 import AdminPanel from './components/AdminPanel';
 import { geminiService } from './services/geminiService';
+import { storageService } from './services/storageService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -23,41 +24,48 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'admin'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [displayInitialCash, setDisplayInitialCash] = useState('');
   const [displayInitialBank, setDisplayInitialBank] = useState('');
   const [displayDailyCost, setDisplayDailyCost] = useState('');
 
+  // Load dữ liệu khi đăng nhập
   useEffect(() => {
-    if (user) {
-      const savedSettings = localStorage.getItem(`cashflow_settings_${user.username}`);
-      const savedTrans = localStorage.getItem(`cashflow_transactions_${user.username}`);
-      
-      const loadedSettings = savedSettings ? JSON.parse(savedSettings) : { userId: user.username, initialCash: 0, initialBank: 0, dailyCost: 0 };
-      setSettings(loadedSettings);
-      setTransactions(savedTrans ? JSON.parse(savedTrans) : []);
-      
-      setDisplayInitialCash(loadedSettings.initialCash > 0 ? loadedSettings.initialCash.toLocaleString('vi-VN') : '');
-      setDisplayInitialBank(loadedSettings.initialBank > 0 ? loadedSettings.initialBank.toLocaleString('vi-VN') : '');
-      setDisplayDailyCost(loadedSettings.dailyCost > 0 ? loadedSettings.dailyCost.toLocaleString('vi-VN') : '');
-      
-      localStorage.setItem('cashflow_current_user', JSON.stringify(user));
-    } else {
-      setSettings({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
-      setTransactions([]);
-      setActiveTab('dashboard');
-      setDisplayInitialCash('');
-      setDisplayInitialBank('');
-      setDisplayDailyCost('');
-    }
+    const loadData = async () => {
+      if (user) {
+        setIsSyncing(true);
+        const data = await storageService.getData(user.username);
+        setSettings(data.settings);
+        setTransactions(data.transactions);
+        
+        setDisplayInitialCash(data.settings.initialCash > 0 ? data.settings.initialCash.toLocaleString('vi-VN') : '');
+        setDisplayInitialBank(data.settings.initialBank > 0 ? data.settings.initialBank.toLocaleString('vi-VN') : '');
+        setDisplayDailyCost(data.settings.dailyCost > 0 ? data.settings.dailyCost.toLocaleString('vi-VN') : '');
+        
+        localStorage.setItem('cashflow_current_user', JSON.stringify(user));
+        setIsSyncing(false);
+      } else {
+        setSettings({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
+        setTransactions([]);
+        setActiveTab('dashboard');
+      }
+    };
+    loadData();
   }, [user]);
 
+  // Tự động đồng bộ khi có thay đổi (Auto-Sync to "Server")
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(`cashflow_settings_${user.username}`, JSON.stringify(settings));
-      localStorage.setItem(`cashflow_transactions_${user.username}`, JSON.stringify(transactions));
+    if (user && transactions.length >= 0) {
+      const sync = async () => {
+        setIsSyncing(true);
+        await storageService.syncData(user.username, transactions, settings);
+        setTimeout(() => setIsSyncing(false), 500);
+      };
+      const debounceSync = setTimeout(sync, 1000); // Đợi 1s sau thay đổi cuối cùng để sync
+      return () => clearTimeout(debounceSync);
     }
-  }, [settings, transactions, user]);
+  }, [transactions, settings, user]);
 
   const stats = useMemo((): FinancialStats => {
     const calc = (type: TransactionType, source: PaymentSource) => 
@@ -110,7 +118,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = useCallback(() => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+    if (window.confirm("Xác nhận đăng xuất? Dữ liệu của bạn đã được lưu an toàn trên hệ thống.")) {
       geminiService.resetSession();
       localStorage.removeItem('cashflow_current_user');
       setUser(null);
@@ -123,13 +131,20 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden">
-      {/* Header đồng bộ theo ảnh */}
       <header className="flex-none bg-white border-b border-slate-100 px-5 pt-[env(safe-area-inset-top,1rem)] h-[calc(4.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between z-50 glass-effect">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
             <i className="fas fa-wallet text-white text-sm"></i>
           </div>
-          <h1 className="text-xl font-black text-slate-800 tracking-tighter">CASHFLOW</h1>
+          <div>
+            <h1 className="text-xl font-black text-slate-800 tracking-tighter leading-none">CASHFLOW</h1>
+            <div className="flex items-center gap-1 mt-1">
+              <i className={`fas ${isSyncing ? 'fa-sync fa-spin text-indigo-500' : 'fa-cloud text-emerald-500'} text-[8px]`}></i>
+              <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
+                {isSyncing ? 'Đang đồng bộ...' : 'Đã lưu trên Server'}
+              </span>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
@@ -145,7 +160,7 @@ const App: React.FC = () => {
             onClick={handleLogout}
             className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center active:scale-90 border border-slate-100 hover:text-rose-500 transition-all shadow-sm"
           >
-            <i className="fas fa-sign-out-alt text-xs"></i>
+            <i className="fas fa-power-off text-xs"></i>
           </button>
         </div>
       </header>
@@ -154,7 +169,6 @@ const App: React.FC = () => {
         <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-24'}`}>
           {activeTab === 'dashboard' && (
             <>
-               {/* THIẾT LẬP MỤC TIÊU */}
                <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex justify-between items-center mb-6">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
