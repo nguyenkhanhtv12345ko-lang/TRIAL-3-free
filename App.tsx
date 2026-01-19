@@ -4,10 +4,8 @@ import { Transaction, TransactionType, PaymentSource, Settings, FinancialStats, 
 import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
-import AIChat from './components/AIChat';
 import Auth from './components/Auth';
 import AdminPanel from './components/AdminPanel';
-import { geminiService } from './services/geminiService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -21,7 +19,7 @@ const App: React.FC = () => {
 
   const [settings, setSettings] = useState<Settings>({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'ai' | 'admin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'admin'>('dashboard');
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const [displayInitialCash, setDisplayInitialCash] = useState('');
@@ -111,7 +109,6 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback(() => {
     if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-      geminiService.resetSession();
       localStorage.removeItem('cashflow_current_user');
       setUser(null);
     }
@@ -123,7 +120,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 font-sans overflow-hidden">
-      {/* Header đồng bộ theo ảnh */}
       <header className="flex-none bg-white border-b border-slate-100 px-5 pt-[env(safe-area-inset-top,1rem)] h-[calc(4.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between z-50 glass-effect">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
@@ -150,11 +146,10 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className={`flex-1 overflow-y-auto ${activeTab === 'ai' || activeTab === 'admin' ? 'overflow-hidden' : 'p-4'}`}>
-        <div className={`max-w-xl mx-auto h-full ${(activeTab === 'ai' || activeTab === 'admin') ? '' : 'space-y-6 pb-24'}`}>
+      <main className={`flex-1 overflow-y-auto ${activeTab === 'admin' ? 'overflow-hidden' : 'p-4'}`}>
+        <div className={`max-w-xl mx-auto h-full ${activeTab === 'admin' ? '' : 'space-y-6 pb-24'}`}>
           {activeTab === 'dashboard' && (
             <>
-               {/* THIẾT LẬP MỤC TIÊU */}
                <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex justify-between items-center mb-6">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -232,17 +227,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'ai' && (
-            <AIChat 
-              transactions={transactions} 
-              stats={stats} 
-              onAddTransaction={(t) => {
-                setTransactions([{...t, id: Date.now().toString(), userId: user.username}, ...transactions]);
-              }} 
-              onClose={() => setActiveTab('dashboard')} 
-            />
-          )}
-
           {activeTab === 'admin' && user.role === UserRole.ADMIN && (
             <div className="h-full p-4 overflow-hidden">
                <AdminPanel onClose={() => setActiveTab('dashboard')} />
@@ -254,8 +238,7 @@ const App: React.FC = () => {
       <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center px-6 pb-[env(safe-area-inset-bottom,1.5rem)] h-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-50 glass-effect">
         {[
           { id: 'dashboard', icon: 'fa-chart-pie', label: 'TỔNG QUAN' },
-          { id: 'transactions', icon: 'fa-exchange-alt', label: 'GIAO DỊCH' },
-          { id: 'ai', icon: 'fa-pen-nib', label: 'TRỢ LÝ AI' }
+          { id: 'transactions', icon: 'fa-exchange-alt', label: 'GIAO DỊCH' }
         ].map(tab => (
           <button 
             key={tab.id}
