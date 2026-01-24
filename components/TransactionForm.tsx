@@ -62,16 +62,10 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
     resetForm();
   };
 
-  // Logic tiên đoán 2.1: Chỉ dự đoán kí tự đầu tiên hoặc <cách> ký tự đầu (đầu mỗi từ)
   const suggestions = useMemo(() => {
     if (!content) return [];
     const lowerInput = content.toLowerCase();
-    
-    return PREDEFINED_KEYWORDS.filter(kw => {
-      const kwLower = kw.toLowerCase();
-      // Khớp từ đầu toàn cụm hoặc khớp ngay sau dấu cách
-      return kwLower.startsWith(lowerInput) || kwLower.includes(" " + lowerInput);
-    });
+    return PREDEFINED_KEYWORDS.filter(kw => kw.toLowerCase().startsWith(lowerInput) || kw.toLowerCase().includes(" " + lowerInput));
   }, [content]);
 
   const handleSuggestionClick = (val: string) => {
@@ -80,72 +74,68 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
   };
 
   return (
-    <div className={`p-6 rounded-[40px] border border-slate-100 transition-all shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] ${editingTransaction ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xs font-black flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg ${editingTransaction ? 'bg-amber-500 shadow-amber-200' : 'bg-indigo-600 shadow-indigo-200'}`}>
-            <i className={`fas ${editingTransaction ? 'fa-edit' : 'fa-plus-circle'} text-[10px]`}></i>
-          </div>
-          <span className="text-slate-800 tracking-tight uppercase">Thông tin dòng tiền</span>
+    <div className={`p-5 rounded-[32px] border border-slate-100 transition-all shadow-sm ${editingTransaction ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
+      <div className="flex justify-between items-center mb-4 px-1">
+        <h3 className="text-[10px] font-black flex items-center gap-3 text-slate-700 uppercase tracking-widest">
+          <i className={`fas ${editingTransaction ? 'fa-edit text-amber-500' : 'fa-plus-circle text-indigo-600'}`}></i>
+          {editingTransaction ? 'Sửa giao dịch' : 'Ghi nhận mới'}
         </h3>
-        {editingTransaction && <button onClick={onCancelEdit} className="text-[9px] font-black text-rose-500 uppercase tracking-widest border-b-2 border-rose-100 pb-0.5">Hủy</button>}
+        {editingTransaction && <button onClick={onCancelEdit} className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Hủy</button>}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-[10px] font-black outline-none focus:bg-white" />
           <div className="relative">
-            <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">Ngày giao dịch</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all" />
-          </div>
-          
-          <div className="relative">
-            <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">Nội dung</label>
-            <input 
-              type="text" 
-              value={content} 
-              onFocus={() => setShowSuggestions(true)}
-              onChange={e => { setContent(e.target.value); setShowSuggestions(true); }} 
-              placeholder="Nhập..." 
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all" 
-            />
-            
+            <input type="text" value={content} onFocus={() => setShowSuggestions(true)} onChange={e => { setContent(e.target.value); setShowSuggestions(true); }} placeholder="Nội dung..." className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 text-[10px] font-black outline-none focus:bg-white" />
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute left-0 bottom-full mb-3 w-full flex gap-2 overflow-x-auto pb-3 no-scrollbar z-50 animate-in slide-in-from-bottom-2">
+              <div className="absolute left-0 top-full mt-2 w-full flex gap-2 overflow-x-auto pb-2 z-50 no-scrollbar">
                 {suggestions.map((s, i) => (
-                  <button 
-                    key={i} 
-                    type="button" 
-                    onClick={() => handleSuggestionClick(s)}
-                    className="flex-none bg-white text-indigo-600 border border-indigo-100 text-[9px] font-black px-4 py-2 rounded-2xl shadow-[0_10px_20px_-5px_rgba(79,70,229,0.2)] whitespace-nowrap active:scale-95 transition-all hover:bg-indigo-600 hover:text-white"
-                  >
-                    {s}
-                  </button>
+                  <button key={i} type="button" onClick={() => handleSuggestionClick(s)} className="bg-indigo-600 text-white text-[8px] font-black px-3 py-1.5 rounded-xl whitespace-nowrap shadow-md">{s}</button>
                 ))}
               </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1 border border-slate-200 shadow-inner">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-slate-50 p-1 rounded-2xl flex gap-1 border border-slate-100">
             {[TransactionType.EXPENSE, TransactionType.INCOME].map(t => (
-              <button key={t} type="button" onClick={() => setType(t)} className={`flex-1 py-2.5 text-[8px] font-black rounded-xl transition-all ${type === t ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}>{t.toUpperCase()}</button>
+              <button key={t} type="button" onClick={() => setType(t)} className={`flex-1 py-2 text-[8px] font-black rounded-xl transition-all ${type === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>{t.toUpperCase()}</button>
             ))}
           </div>
-          <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1 border border-slate-200 shadow-inner">
+          <div className="bg-slate-50 p-1 rounded-2xl flex gap-1 border border-slate-100">
             {[PaymentSource.CASH, PaymentSource.BANK].map(s => (
-              <button key={s} type="button" onClick={() => setSource(s)} className={`flex-1 py-2.5 text-[8px] font-black rounded-xl transition-all ${source === s ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}>{s.split(' ')[0].toUpperCase()}</button>
+              <button key={s} type="button" onClick={() => setSource(s)} className={`flex-1 py-2 text-[8px] font-black rounded-xl transition-all ${source === s ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>{s.split(' ')[0].toUpperCase()}</button>
             ))}
           </div>
         </div>
 
-        <div className="relative py-2">
-           <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-white px-3 text-[7px] font-black text-slate-400 uppercase tracking-widest z-10 border border-slate-100 rounded-full">Số tiền</div>
-           <input type="text" inputMode="numeric" value={displayAmount} onChange={handleAmountChange} placeholder="0đ" className={`w-full text-3xl font-black text-center py-5 bg-slate-50 rounded-3xl border-2 border-slate-100 outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-inner ${type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`} />
-        </div>
+        {type === TransactionType.EXPENSE && (
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              type="button" 
+              onClick={() => setIsExcluded(!isExcluded)}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-2xl text-[8px] font-black transition-all border ${isExcluded ? 'bg-amber-100 border-amber-200 text-amber-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'}`}
+            >
+              <i className={`fas fa-star ${isExcluded ? 'text-amber-500' : ''}`}></i>
+              ĐẶC BIỆT
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setIsFromSavings(!isFromSavings)}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-2xl text-[8px] font-black transition-all border ${isFromSavings ? 'bg-indigo-100 border-indigo-200 text-indigo-700 shadow-inner' : 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'}`}
+            >
+              <i className={`fas fa-tint ${isFromSavings ? 'text-indigo-500' : ''}`}></i>
+              TỪ TÍCH LŨY
+            </button>
+          </div>
+        )}
 
-        <button type="submit" className={`w-full py-4.5 rounded-[22px] font-black text-white text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all shadow-xl ${editingTransaction ? 'bg-amber-500 shadow-amber-100 border-b-4 border-amber-700' : 'bg-indigo-600 shadow-indigo-100 border-b-4 border-indigo-800'}`}>
-          {editingTransaction ? 'Lưu thay đổi' : 'Ghi nhận giao dịch'}
+        <input type="text" inputMode="numeric" value={displayAmount} onChange={handleAmountChange} placeholder="0đ" className={`w-full text-2xl font-black text-center py-3 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:bg-white transition-all ${type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`} />
+
+        <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-black rounded-[24px] text-[10px] uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all">
+          {editingTransaction ? 'Lưu thay đổi' : 'Ghi nhận'}
         </button>
       </form>
     </div>

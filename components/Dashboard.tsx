@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isTarget ? '#4f46e5' : isExpense ? '#f43f5e' : entry.color || entry.fill }}></div>
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                    {isTarget ? 'HẠN MỨC' : isExpense ? 'THỰC CHI' : 'GIÁ TRỊ'}
+                    {isTarget ? 'HẠN MỨC' : isExpense ? 'CHI' : 'GIÁ TRỊ'}
                   </span>
                 </div>
                 <span className="text-[9px] font-black text-slate-900">
@@ -76,32 +76,47 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
   const assetData = [{ name: 'Mặt', value: stats.currentCash }, { name: 'Bank', value: stats.currentBank }].filter(d => d.value > 0);
   const PIE_COLORS = ['#6366f1', '#10b981'];
   const formatCurrency = (val: number) => val.toLocaleString('vi-VN') + 'đ';
+  
+  // Mục tiêu Khoản nho nhỏ là 30 ngày hạn mức
   const targetSavingsPool = settings.dailyCost * 30 || 1000000;
   const fillPercentage = Math.min(100, Math.max(0, (stats.cumulativeSaving / targetSavingsPool) * 100));
 
   return (
     <div className="space-y-4 animate-in fade-in duration-700">
-      {/* KHOẢN NHO NHỎ TANK - REDUCED HEIGHT */}
-      <div className="relative overflow-hidden rounded-[32px] border border-white shadow-sm bg-white ring-1 ring-slate-100">
-        <div className="absolute bottom-0 left-0 w-full bg-indigo-50/50 transition-all duration-[2000ms]" style={{ height: `${fillPercentage}%` }}>
-          <div className="absolute top-0 left-0 w-[200%] h-4 -translate-y-[80%] opacity-10 animate-wave-slow fill-indigo-500"><svg viewBox="0 0 100 20" preserveAspectRatio="none" className="w-full h-full"><path d="M0 10 C 20 15 40 5 60 10 C 80 15 100 5 120 10 V 20 H 0 Z" /></svg></div>
+      {/* KHOẢN NHO NHỎ TANK - LIQUID UI */}
+      <div className="relative overflow-hidden rounded-[32px] border border-white shadow-lg bg-white ring-1 ring-slate-100">
+        <div 
+          className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-indigo-500/20 to-indigo-500/40 transition-all duration-[2000ms] ease-out" 
+          style={{ height: `${fillPercentage}%` }}
+        >
+          <div className="absolute top-0 left-0 w-[200%] h-8 -translate-y-1/2 opacity-30 animate-wave-slow fill-indigo-500">
+            <svg viewBox="0 0 100 20" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M0 10 C 20 15 40 5 60 10 C 80 15 100 5 120 10 V 20 H 0 Z" />
+            </svg>
+          </div>
         </div>
-        <div className="relative z-10 p-4 flex flex-col justify-between min-h-[110px]">
+        <div className="relative z-10 p-5 flex flex-col justify-between min-h-[120px]">
           <div className="flex justify-between items-start">
             <div className="flex flex-col">
-              <p className="text-[8px] font-black uppercase tracking-widest text-indigo-600/60">Khoản nho nhỏ</p>
-              <span className="text-[6px] font-bold text-slate-400 uppercase">Khả dụng</span>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-600/60">Khoản nho nhỏ</p>
+              <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Dự trữ khả dụng</span>
             </div>
-            <div className="px-2 py-1 rounded-xl bg-indigo-600 text-white text-[8px] font-black shadow-md">{fillPercentage.toFixed(1)}%</div>
+            <div className="px-3 py-1.5 rounded-2xl bg-indigo-600 text-white text-[9px] font-black shadow-lg shadow-indigo-200 ring-2 ring-white">
+              {fillPercentage.toFixed(1)}%
+            </div>
           </div>
-          <h2 className="text-2xl font-black tracking-tighter text-slate-900">{formatCurrency(stats.cumulativeSaving)}</h2>
+          <div>
+            <h2 className="text-3xl font-black tracking-tighter text-slate-900 drop-shadow-sm">{formatCurrency(stats.cumulativeSaving)}</h2>
+            <div className="w-full bg-slate-100/50 h-1 rounded-full mt-2 overflow-hidden border border-white/20">
+              <div className="h-full bg-indigo-500/50" style={{ width: `${fillPercentage}%` }}></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {/* ASSET PIE - COMPACT */}
-        <div className="bg-white border border-slate-50 p-3.5 rounded-[28px] flex flex-col items-center shadow-sm">
-          <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1 w-full text-center">Cơ cấu tài sản</p>
+        <div className="bg-white border border-slate-50 p-4 rounded-[28px] flex flex-col items-center shadow-sm">
+          <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-2 w-full text-center">Cơ cấu tài sản</p>
           <div className="h-20 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -112,42 +127,40 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-3 mt-1">
              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Mặt</span></div>
              <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Bank</span></div>
           </div>
         </div>
 
-        {/* LIQUIDITY - COMPACT */}
-        <div className="bg-white border border-slate-50 p-3.5 rounded-[28px] flex flex-col justify-center shadow-sm">
-          <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">TỔNG</p>
+        <div className="bg-white border border-slate-50 p-4 rounded-[28px] flex flex-col justify-center shadow-sm">
+          <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Tổng</p>
           <p className="text-sm font-black text-slate-900 tracking-tight text-center">{formatCurrency(stats.total)}</p>
-          <div className="w-full bg-slate-50 h-1.5 rounded-full mt-2 overflow-hidden border border-slate-100">
+          <div className="w-full bg-slate-50 h-2 rounded-full mt-3 overflow-hidden border border-slate-100 shadow-inner">
              <div className="h-full bg-indigo-500" style={{ width: `${(stats.currentCash/stats.total)*100 || 0}%` }}></div>
           </div>
-          <p className="text-[6px] text-slate-400 mt-1.5 font-black text-center uppercase">Cash: {Math.round((stats.currentCash/stats.total)*100 || 0)}%</p>
+          <p className="text-[6px] text-slate-400 mt-2 font-black text-center uppercase tracking-widest">Cash: {Math.round((stats.currentCash/stats.total)*100 || 0)}%</p>
         </div>
 
-        {/* TOTAL ASSET - SLIMMER */}
-        <div className="col-span-2 bg-slate-900 p-4 rounded-[32px] shadow-lg relative overflow-hidden">
-           <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Tài sản tổng</p>
-           <h3 className="text-2xl font-black text-white tracking-tighter my-1">{formatCurrency(stats.total)}</h3>
-           <div className="flex justify-between border-t border-white/5 pt-3 mt-1">
+        <div className="col-span-2 bg-slate-900 p-5 rounded-[32px] shadow-xl relative overflow-hidden ring-1 ring-white/5">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+           <p className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em]">Tài sản tổng</p>
+           <h3 className="text-3xl font-black text-white tracking-tighter my-2">{formatCurrency(stats.total)}</h3>
+           <div className="flex justify-between border-t border-white/5 pt-4 mt-2">
               <div>
-                <p className="text-[6px] font-black text-slate-500 uppercase">Sinh tồn</p>
-                <p className="text-sm font-black text-indigo-400 leading-none">{stats.survivalDays} <span className="text-[6px] font-bold">Ngày 💀</span></p>
+                <p className="text-[6px] font-black text-slate-500 uppercase tracking-widest">Sống sót</p>
+                <p className="text-base font-black text-indigo-400 leading-none">{stats.survivalDays} <span className="text-[7px] font-bold">Ngày 💀</span></p>
               </div>
               <div className="text-right">
-                <p className="text-[6px] font-black text-slate-500 uppercase">Chi tiêu hôm nay</p>
-                <p className="text-sm font-black text-rose-400 leading-none">{formatCurrency(stats.todayExpense)}</p>
+                <p className="text-[6px] font-black text-slate-500 uppercase tracking-widest">Chi tiêu hôm nay</p>
+                <p className="text-base font-black text-rose-400 leading-none">{formatCurrency(stats.todayExpense)}</p>
               </div>
            </div>
         </div>
       </div>
 
-      {/* CHARTS - REDUCED HEIGHT TO h-32 (8rem) */}
       <div className="bg-white border border-slate-50 p-4 rounded-[28px] shadow-sm">
-        <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-4">Dòng tiền trong một tuần</h3>
+        <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-4">Biến động 7 ngày</h3>
         <div className="h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 0, right: 0, left: -35, bottom: 0 }}>
@@ -166,7 +179,7 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
       </div>
 
       <div className="bg-white border border-slate-50 p-4 rounded-[28px] shadow-sm">
-        <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-4">Kỷ luật chi tiêu</h3>
+        <h3 className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-4">Kỷ luật mục tiêu</h3>
         <div className="h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 0, right: 0, left: -35, bottom: 0 }}>
@@ -182,7 +195,7 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
         <div className="flex justify-center gap-8 mt-4">
            <div className="flex items-center gap-2">
              <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm"></div>
-             <span className="text-[8px] font-black text-slate-500 uppercase">THỰC CHI</span>
+             <span className="text-[8px] font-black text-slate-500 uppercase">CHI</span>
            </div>
            <div className="flex items-center gap-2">
              <div className="w-5 h-0.5 bg-indigo-600 rounded-full"></div>
@@ -191,7 +204,10 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
         </div>
       </div>
       
-      <style>{`@keyframes wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } } .animate-wave-slow { animation: wave 10s linear infinite; }`}</style>
+      <style>{`
+        @keyframes wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } } 
+        .animate-wave-slow { animation: wave 10s linear infinite; }
+      `}</style>
     </div>
   );
 };
