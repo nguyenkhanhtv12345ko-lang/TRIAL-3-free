@@ -30,6 +30,8 @@ export interface Transaction {
   type: TransactionType;
   source: PaymentSource;
   amount: number;
+  isExcluded?: boolean; // Không tính vào hạn mức chi tiêu hàng ngày
+  isFromSavings?: boolean; // Chi trực tiếp từ khoản tích lũy (Khoản nho nhỏ)
 }
 
 export interface Settings {
