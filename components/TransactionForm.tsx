@@ -62,14 +62,14 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
     resetForm();
   };
 
-  // Logic tiên đoán: Chỉ dự đoán kí tự đầu tiên hoặc kí tự <phím cách>kí tự đầu
+  // Logic tiên đoán 2.1: Chỉ dự đoán kí tự đầu tiên hoặc <cách> ký tự đầu (đầu mỗi từ)
   const suggestions = useMemo(() => {
     if (!content) return [];
     const lowerInput = content.toLowerCase();
     
     return PREDEFINED_KEYWORDS.filter(kw => {
       const kwLower = kw.toLowerCase();
-      // Khớp từ đầu hoặc khớp sau dấu cách (đầu mỗi từ trong cụm từ)
+      // Khớp từ đầu toàn cụm hoặc khớp ngay sau dấu cách
       return kwLower.startsWith(lowerInput) || kwLower.includes(" " + lowerInput);
     });
   }, [content]);
@@ -80,42 +80,43 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
   };
 
   return (
-    <div className={`p-5 rounded-[32px] border border-slate-100 transition-all shadow-sm ${editingTransaction ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
-      <div className="flex justify-between items-center mb-5">
-        <h3 className="text-xs font-black flex items-center gap-2">
-          <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white ${editingTransaction ? 'bg-amber-500' : 'bg-indigo-600 shadow-lg shadow-indigo-100'}`}><i className={`fas ${editingTransaction ? 'fa-edit' : 'fa-plus'} text-[8px]`}></i></div>
-          <span className="text-slate-700 tracking-tight uppercase">{editingTransaction ? 'CẬP NHẬT' : 'GIAO DỊCH MỚI'}</span>
+    <div className={`p-6 rounded-[40px] border border-slate-100 transition-all shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] ${editingTransaction ? 'bg-amber-50 border-amber-200' : 'bg-white'}`}>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xs font-black flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg ${editingTransaction ? 'bg-amber-500 shadow-amber-200' : 'bg-indigo-600 shadow-indigo-200'}`}>
+            <i className={`fas ${editingTransaction ? 'fa-edit' : 'fa-plus-circle'} text-[10px]`}></i>
+          </div>
+          <span className="text-slate-800 tracking-tight uppercase">Thông tin dòng tiền</span>
         </h3>
-        {editingTransaction && <button onClick={onCancelEdit} className="text-[8px] font-black text-rose-500 uppercase tracking-widest hover:underline">Hủy sửa</button>}
+        {editingTransaction && <button onClick={onCancelEdit} className="text-[9px] font-black text-rose-500 uppercase tracking-widest border-b-2 border-rose-100 pb-0.5">Hủy</button>}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="relative">
-            <i className="fas fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[9px]"></i>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-400 focus:bg-white transition-all" />
+            <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">Ngày giao dịch</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all" />
           </div>
           
-          <div className="relative group">
-            <i className="fas fa-pen absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[9px]"></i>
+          <div className="relative">
+            <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">Nội dung</label>
             <input 
               type="text" 
               value={content} 
               onFocus={() => setShowSuggestions(true)}
               onChange={e => { setContent(e.target.value); setShowSuggestions(true); }} 
-              placeholder="Nội dung..." 
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-400 focus:bg-white transition-all" 
+              placeholder="Nhập..." 
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[10px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all" 
             />
             
-            {/* Thanh đề xuất nhập nhanh */}
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute left-0 bottom-full mb-2 w-full flex gap-1 overflow-x-auto pb-2 custom-scrollbar scroll-smooth no-scrollbar z-30">
+              <div className="absolute left-0 bottom-full mb-3 w-full flex gap-2 overflow-x-auto pb-3 no-scrollbar z-50 animate-in slide-in-from-bottom-2">
                 {suggestions.map((s, i) => (
                   <button 
                     key={i} 
                     type="button" 
                     onClick={() => handleSuggestionClick(s)}
-                    className="flex-none bg-white text-indigo-600 border border-indigo-100 text-[8px] font-black px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap active:scale-95 transition-transform hover:bg-indigo-600 hover:text-white"
+                    className="flex-none bg-white text-indigo-600 border border-indigo-100 text-[9px] font-black px-4 py-2 rounded-2xl shadow-[0_10px_20px_-5px_rgba(79,70,229,0.2)] whitespace-nowrap active:scale-95 transition-all hover:bg-indigo-600 hover:text-white"
                   >
                     {s}
                   </button>
@@ -126,26 +127,25 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100">{[TransactionType.EXPENSE, TransactionType.INCOME].map(t => (
-            <button key={t} type="button" onClick={() => setType(t)} className={`flex-1 py-2 text-[8px] font-black rounded-lg transition-all ${type === t ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-400 hover:text-slate-600'}`}>{t.toUpperCase()}</button>
-          ))}</div>
-          <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100">{[PaymentSource.CASH, PaymentSource.BANK].map(s => (
-            <button key={s} type="button" onClick={() => setSource(s)} className={`flex-1 py-2 text-[8px] font-black rounded-lg transition-all ${source === s ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-400 hover:text-slate-600'}`}>{s.split(' ')[0].toUpperCase()}</button>
-          ))}</div>
-        </div>
-
-        {type === TransactionType.EXPENSE && (
-          <div className="flex gap-2">
-            <button type="button" onClick={() => { setIsExcluded(!isExcluded); if(!isExcluded) setIsFromSavings(false); }} className={`flex-1 p-2 rounded-xl border text-[8px] font-black transition-all ${isExcluded ? 'bg-amber-500 text-white border-amber-600' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'}`}>ĐẶC BIỆT</button>
-            <button type="button" onClick={() => { setIsFromSavings(!isFromSavings); if(!isFromSavings) setIsExcluded(false); }} className={`flex-1 p-2 rounded-xl border text-[8px] font-black transition-all ${isFromSavings ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'}`}>TÍCH LŨY</button>
+          <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1 border border-slate-200 shadow-inner">
+            {[TransactionType.EXPENSE, TransactionType.INCOME].map(t => (
+              <button key={t} type="button" onClick={() => setType(t)} className={`flex-1 py-2.5 text-[8px] font-black rounded-xl transition-all ${type === t ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}>{t.toUpperCase()}</button>
+            ))}
           </div>
-        )}
+          <div className="bg-slate-50 p-1.5 rounded-2xl flex gap-1 border border-slate-200 shadow-inner">
+            {[PaymentSource.CASH, PaymentSource.BANK].map(s => (
+              <button key={s} type="button" onClick={() => setSource(s)} className={`flex-1 py-2.5 text-[8px] font-black rounded-xl transition-all ${source === s ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}>{s.split(' ')[0].toUpperCase()}</button>
+            ))}
+          </div>
+        </div>
 
         <div className="relative py-2">
-           <input type="text" inputMode="numeric" value={displayAmount} onChange={handleAmountChange} placeholder="0đ" className={`w-full text-2xl font-black text-center py-4 bg-slate-50 rounded-2xl border border-slate-200 outline-none focus:border-indigo-400 focus:bg-white transition-all ${type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`} />
+           <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-white px-3 text-[7px] font-black text-slate-400 uppercase tracking-widest z-10 border border-slate-100 rounded-full">Số tiền</div>
+           <input type="text" inputMode="numeric" value={displayAmount} onChange={handleAmountChange} placeholder="0đ" className={`w-full text-3xl font-black text-center py-5 bg-slate-50 rounded-3xl border-2 border-slate-100 outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-inner ${type === TransactionType.INCOME ? 'text-emerald-600' : 'text-rose-600'}`} />
         </div>
-        <button type="submit" className={`w-full py-4 rounded-2xl font-black text-white text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-indigo-100 ${editingTransaction ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-          {editingTransaction ? 'LƯU THAY ĐỔI' : 'XÁC NHẬN GIAO DỊCH'}
+
+        <button type="submit" className={`w-full py-4.5 rounded-[22px] font-black text-white text-[11px] uppercase tracking-widest active:scale-[0.98] transition-all shadow-xl ${editingTransaction ? 'bg-amber-500 shadow-amber-100 border-b-4 border-amber-700' : 'bg-indigo-600 shadow-indigo-100 border-b-4 border-indigo-800'}`}>
+          {editingTransaction ? 'Lưu thay đổi' : 'Ghi nhận giao dịch'}
         </button>
       </form>
     </div>

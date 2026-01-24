@@ -97,10 +97,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleUpdateTransactionStates = (id: string, updates: Partial<Transaction>) => {
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  };
-
   const handleAmountInput = (value: string, key: keyof Settings) => {
     const numeric = Number(value.replace(/\D/g, ''));
     setSettings(prev => ({ ...prev, [key]: numeric }));
@@ -110,72 +106,75 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] font-sans overflow-hidden">
-      <header className="flex-none bg-white/80 backdrop-blur-2xl border-b border-slate-100 px-4 h-14 flex items-center justify-between z-50">
+      <header className="flex-none bg-white/80 backdrop-blur-2xl border-b border-slate-100 px-4 h-12 flex items-center justify-between z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100 rotate-3">
-            <i className="fas fa-layer-group text-white text-[10px]"></i>
+          <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-100 rotate-3 ring-2 ring-white">
+            <i className="fas fa-layer-group text-white text-[9px]"></i>
           </div>
           <div>
-            <h1 className="text-base font-black text-slate-800 tracking-tighter leading-none">CASH<span className="text-indigo-600">FLOW</span></h1>
-            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Version 2.0 Mini</p>
+            <h1 className="text-sm font-black text-slate-800 tracking-tighter leading-none">CASH<span className="text-indigo-600">FLOW</span></h1>
+            <p className="text-[6px] font-black text-slate-400 uppercase tracking-widest">v2.1 Compact</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {user.role === UserRole.ADMIN && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-slate-900 text-white shadow-lg' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}
             >
-              <i className="fas fa-cog text-[10px]"></i>
+              <i className="fas fa-cog text-[9px]"></i>
             </button>
           )}
-          <button onClick={handleLogout} className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center active:scale-90 border border-slate-100"><i className="fas fa-power-off text-[10px]"></i></button>
+          <button onClick={handleLogout} className="w-7 h-7 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center border border-slate-100"><i className="fas fa-power-off text-[9px]"></i></button>
         </div>
       </header>
 
       <main className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-        <div className="max-w-sm mx-auto space-y-4 pb-24">
+        <div className="max-w-sm mx-auto space-y-4 pb-20">
           {activeTab === 'dashboard' && (
             <>
-               <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-500">
-                  <div className="flex justify-between items-center mb-5">
+               {/* UI 2.1 COMPACT: THIẾT LẬP MỤC TIÊU */}
+               <div className="bg-white p-4 rounded-[32px] shadow-sm border border-slate-50 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div className="flex justify-between items-center mb-3 px-1">
                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">THIẾT LẬP MỤC TIÊU</p>
-                    <button onClick={() => setSettings(p => ({...p, initialCash:0, initialBank:0, dailyCost:0}))} className="text-[8px] font-black text-rose-500 uppercase tracking-widest border-b border-rose-100">Reset</button>
+                    <button onClick={() => setSettings(p => ({...p, initialCash:0, initialBank:0, dailyCost:0}))} className="text-[7px] font-black text-rose-500 uppercase tracking-widest">RESET</button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[8px] text-slate-400 font-black uppercase ml-1">TIỀN MẶT</label>
+                      <label className="text-[7px] text-slate-400 font-black uppercase tracking-widest ml-1">TIỀN MẶT</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         value={settings.initialCash.toLocaleString('vi-VN')} 
                         onChange={e => handleAmountInput(e.target.value, 'initialCash')} 
-                        className="w-full bg-slate-50 p-3 rounded-xl text-sm font-black border-2 border-transparent focus:bg-white focus:border-indigo-100 outline-none transition-all"
+                        className="w-full bg-slate-50 p-2.5 rounded-2xl text-[10px] font-black text-center border border-slate-100 outline-none focus:ring-2 focus:ring-indigo-100"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[8px] text-slate-400 font-black uppercase ml-1">TÀI KHOẢN</label>
+                      <label className="text-[7px] text-slate-400 font-black uppercase tracking-widest ml-1">TÀI KHOẢN</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         value={settings.initialBank.toLocaleString('vi-VN')} 
                         onChange={e => handleAmountInput(e.target.value, 'initialBank')} 
-                        className="w-full bg-slate-50 p-3 rounded-xl text-sm font-black border-2 border-transparent focus:bg-white focus:border-indigo-100 outline-none transition-all"
+                        className="w-full bg-slate-50 p-2.5 rounded-2xl text-[10px] font-black text-center border border-slate-100 outline-none focus:ring-2 focus:ring-indigo-100"
                       />
                     </div>
-                    <div className="col-span-2 space-y-1">
-                      <label className="text-[8px] text-slate-400 font-black uppercase ml-1 text-center block">HẠN MỨC / NGÀY</label>
+                    <div className="col-span-2 mt-1 space-y-1">
+                      <label className="text-[7px] text-slate-400 font-black uppercase tracking-widest text-center block">HẠN MỨC / NGÀY</label>
                       <input 
                         type="text" 
                         inputMode="numeric"
                         value={settings.dailyCost.toLocaleString('vi-VN')} 
                         onChange={e => handleAmountInput(e.target.value, 'dailyCost')} 
-                        className="w-full bg-indigo-50/50 p-4 rounded-2xl text-xl font-black text-indigo-600 text-center border-2 border-indigo-50 focus:bg-white focus:border-indigo-100 outline-none transition-all"
+                        className="w-full bg-indigo-50/20 p-3 rounded-2xl text-lg font-black text-indigo-600 text-center border border-indigo-50/50 focus:bg-white outline-none transition-all shadow-sm"
                       />
                     </div>
                   </div>
                </div>
+
                <Dashboard stats={stats} transactions={transactions} settings={settings} user={user} onLogout={handleLogout} />
             </>
           )}
@@ -193,7 +192,7 @@ const App: React.FC = () => {
                 settings={settings}
                 onDelete={(id) => { if (window.confirm('Xác nhận xóa giao dịch?')) setTransactions(transactions.filter(t => t.id !== id)); }}
                 onEdit={(t) => { setEditingTransaction(t); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                onUpdateStates={handleUpdateTransactionStates}
+                onUpdateStates={(id, updates) => setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))}
               />
             </div>
           )}
@@ -204,7 +203,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <nav className="flex-none bg-white/80 backdrop-blur-3xl border-t border-slate-100 flex justify-around items-center px-4 pb-4 h-20 z-50">
+      <nav className="flex-none bg-white border-t border-slate-100 flex justify-around items-center h-16 z-50">
         {[
           { id: 'dashboard', icon: 'fa-th-large', label: 'TỔNG QUAN' },
           { id: 'transactions', icon: 'fa-server', label: 'GIAO DỊCH' }
@@ -212,12 +211,12 @@ const App: React.FC = () => {
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex flex-col items-center gap-1 transition-all duration-300 ${activeTab === tab.id ? 'text-indigo-600 scale-105' : 'text-slate-400'}`}
+            className={`flex flex-col items-center transition-all ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'}`}
           >
-            <div className={`w-10 h-8 flex items-center justify-center rounded-xl ${activeTab === tab.id ? 'bg-indigo-50' : ''}`}>
-               <i className={`fas ${tab.icon} text-base`}></i>
+            <div className={`w-10 h-8 flex items-center justify-center rounded-xl transition-all ${activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50'}`}>
+               <i className={`fas ${tab.icon} text-xs`}></i>
             </div>
-            <span className="text-[7px] font-black uppercase tracking-[0.1em]">{tab.label}</span>
+            <span className="text-[7px] font-black mt-1 uppercase tracking-widest">{tab.label}</span>
           </button>
         ))}
       </nav>
