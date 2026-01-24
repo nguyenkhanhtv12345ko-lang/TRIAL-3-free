@@ -51,7 +51,9 @@ const TransactionList: React.FC<Props> = ({ transactions, settings, onDelete, on
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className={`text-[6px] font-black px-1.5 py-0.5 rounded-lg border uppercase tracking-wider ${t.type === TransactionType.INCOME ? 'text-emerald-600 border-emerald-100 bg-emerald-50' : 'text-rose-600 border-rose-100 bg-rose-50'}`}>{t.type}</span>
-                      <span className="text-[6px] font-bold text-slate-400 uppercase">{t.source.split(' ')[0]}</span>
+                      <span className="text-[6px] font-bold text-slate-400 uppercase">
+                        {t.source === PaymentSource.CASH ? 'Tiền' : 'ATM'}
+                      </span>
                       {t.type === TransactionType.EXPENSE && (
                         <div className="flex items-center gap-1.5 ml-1">
                            {t.isExcluded && <i className="fas fa-star text-[7px] text-amber-500"></i>}

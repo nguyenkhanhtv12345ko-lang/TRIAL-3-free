@@ -127,19 +127,34 @@ const Dashboard: React.FC<Props> = ({ stats, transactions, settings }) => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex gap-3 mt-1">
-             <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Mặt</span></div>
-             <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Bank</span></div>
+          <div className="flex flex-col gap-1 mt-1 w-full px-1">
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Mặt</span></div>
+               <span className="text-[7px] font-black text-slate-800">{formatCurrency(stats.currentCash)}</span>
+             </div>
+             <div className="flex items-center justify-between">
+               <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-[6px] text-slate-500 font-black uppercase">Bank</span></div>
+               <span className="text-[7px] font-black text-slate-800">{formatCurrency(stats.currentBank)}</span>
+             </div>
           </div>
         </div>
 
         <div className="bg-white border border-slate-50 p-4 rounded-[28px] flex flex-col justify-center shadow-sm">
           <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Tổng</p>
-          <p className="text-sm font-black text-slate-900 tracking-tight text-center">{formatCurrency(stats.total)}</p>
+          <p className="text-sm font-black text-slate-900 tracking-tight text-center leading-none">{formatCurrency(stats.total)}</p>
           <div className="w-full bg-slate-50 h-2 rounded-full mt-3 overflow-hidden border border-slate-100 shadow-inner">
              <div className="h-full bg-indigo-500" style={{ width: `${(stats.currentCash/stats.total)*100 || 0}%` }}></div>
           </div>
-          <p className="text-[6px] text-slate-400 mt-2 font-black text-center uppercase tracking-widest">Cash: {Math.round((stats.currentCash/stats.total)*100 || 0)}%</p>
+          <div className="mt-3 space-y-1.5">
+             <div className="flex justify-between items-center border-b border-slate-50 pb-1">
+                <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest">Tiền mặt:</span>
+                <span className="text-[8px] font-black text-indigo-600">{formatCurrency(stats.currentCash)}</span>
+             </div>
+             <div className="flex justify-between items-center">
+                <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest">Tài khoản:</span>
+                <span className="text-[8px] font-black text-emerald-600">{formatCurrency(stats.currentBank)}</span>
+             </div>
+          </div>
         </div>
 
         <div className="col-span-2 bg-slate-900 p-5 rounded-[32px] shadow-xl relative overflow-hidden ring-1 ring-white/5">

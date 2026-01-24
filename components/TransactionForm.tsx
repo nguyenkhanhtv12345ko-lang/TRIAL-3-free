@@ -106,7 +106,14 @@ const TransactionForm: React.FC<Props> = ({ onAdd, editingTransaction, onUpdate,
           </div>
           <div className="bg-slate-50 p-1 rounded-2xl flex gap-1 border border-slate-100">
             {[PaymentSource.CASH, PaymentSource.BANK].map(s => (
-              <button key={s} type="button" onClick={() => setSource(s)} className={`flex-1 py-2 text-[8px] font-black rounded-xl transition-all ${source === s ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>{s.split(' ')[0].toUpperCase()}</button>
+              <button 
+                key={s} 
+                type="button" 
+                onClick={() => setSource(s)} 
+                className={`flex-1 py-2 text-[8px] font-black rounded-xl transition-all ${source === s ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+              >
+                {s === PaymentSource.CASH ? 'TIỀN' : 'ATM'}
+              </button>
             ))}
           </div>
         </div>
