@@ -6,16 +6,60 @@ import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import Auth from './components/Auth';
 import AdminPanel from './components/AdminPanel';
+import { auth, db, logout as firebaseLogout } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const saved = localStorage.getItem('cashflow_current_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [settings, setSettings] = useState<Settings>({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -23,28 +67,81 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
-    if (user) {
-      const savedSettings = localStorage.getItem(`cashflow_settings_${user.username}`);
-      const savedTrans = localStorage.getItem(`cashflow_transactions_${user.username}`);
-      
-      const loadedSettings = savedSettings ? JSON.parse(savedSettings) : { userId: user.username, initialCash: 0, initialBank: 0, dailyCost: 0 };
-      setSettings(loadedSettings);
-      setTransactions(savedTrans ? JSON.parse(savedTrans) : []);
-      
-      localStorage.setItem('cashflow_current_user', JSON.stringify(user));
-    } else {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Also listen to User profile in firestore to get role
+        const unsubUser = onSnapshot(doc(db, 'users', firebaseUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+             setUser(docSnap.data() as User);
+          } else {
+             // Create user profile if not exists
+             const newUser: User = {
+                username: firebaseUser.uid,
+                name: firebaseUser.displayName || 'Người dùng',
+                role: UserRole.USER,
+                createdAt: new Date().toISOString()
+             };
+             setDoc(doc(db, 'users', firebaseUser.uid), newUser).catch((err) => handleFirestoreError(err, OperationType.WRITE, `users/${firebaseUser.uid}`));
+             setUser(newUser);
+          }
+        }, (error) => handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`));
+        return () => unsubUser();
+      } else {
+        setUser(null);
+      }
+      setAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
       setSettings({ userId: '', initialCash: 0, initialBank: 0, dailyCost: 0 });
       setTransactions([]);
       setActiveTab('dashboard');
+      return;
     }
+
+    // Subscribe to settings
+    const unsubSettings = onSnapshot(doc(db, 'users', user.username, 'settings', 'default'), (docSnap) => {
+      if (docSnap.exists()) {
+        setSettings(docSnap.data() as Settings);
+      } else {
+        setSettings({ userId: user.username, initialCash: 0, initialBank: 0, dailyCost: 0 });
+      }
+    }, (error) => handleFirestoreError(error, OperationType.GET, `users/${user.username}/settings/default`));
+
+    // Subscribe to transactions
+    const unsubTransactions = onSnapshot(collection(db, 'users', user.username, 'transactions'), (snapshot) => {
+      const trans: Transaction[] = [];
+      snapshot.forEach(docSnap => {
+        trans.push(docSnap.data() as Transaction);
+      });
+      trans.sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+      setTransactions(trans);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${user.username}/transactions`));
+
+    return () => {
+      unsubSettings();
+      unsubTransactions();
+    };
   }, [user]);
 
-  useEffect(() => {
+  // Sync settings when they change locally
+  const handleSaveSettings = async (newSettings: Settings) => {
+    setSettings(newSettings);
     if (user) {
-      localStorage.setItem(`cashflow_settings_${user.username}`, JSON.stringify(settings));
-      localStorage.setItem(`cashflow_transactions_${user.username}`, JSON.stringify(transactions));
+       try {
+           await setDoc(doc(db, 'users', user.username, 'settings', 'default'), {
+               ...newSettings,
+               userId: user.username,
+               updatedAt: new Date().toISOString()
+           });
+       } catch (err) {
+           handleFirestoreError(err, OperationType.WRITE, `users/${user.username}/settings/default`);
+       }
     }
-  }, [settings, transactions, user]);
+  };
 
   const stats = useMemo((): FinancialStats => {
     const calc = (type: TransactionType, source: PaymentSource) => 
@@ -90,17 +187,18 @@ const App: React.FC = () => {
     };
   }, [transactions, settings]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     if (window.confirm("Thoát phiên làm việc an toàn?")) {
-      localStorage.removeItem('cashflow_current_user');
-      setUser(null);
+      await firebaseLogout();
     }
   }, []);
 
   const handleAmountInput = (value: string, key: keyof Settings) => {
     const numeric = Number(value.replace(/\D/g, ''));
-    setSettings(prev => ({ ...prev, [key]: numeric }));
+    handleSaveSettings({...settings, [key]: numeric});
   };
+
+  if (!authReady) return <div className="h-screen bg-tech-900 flex items-center justify-center text-tech-cyan">Loading...</div>;
 
   if (!user) return <Auth onLogin={setUser} />;
 
@@ -138,7 +236,7 @@ const App: React.FC = () => {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-tech-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
                   <div className="flex justify-between items-center mb-6 px-1 relative z-10">
                     <p className="text-[13px] font-black text-tech-cyan uppercase tracking-[0.2em]">THIẾT LẬP MỤC TIÊU</p>
-                    <button onClick={() => setSettings(p => ({...p, initialCash:0, initialBank:0, dailyCost:0}))} className="text-[12px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300">RESET</button>
+                    <button onClick={() => handleSaveSettings({...settings, initialCash:0, initialBank:0, dailyCost:0})} className="text-[12px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300">RESET</button>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 relative z-10">
@@ -182,17 +280,49 @@ const App: React.FC = () => {
           {activeTab === 'transactions' && (
             <div className="space-y-7">
               <TransactionForm 
-                onAdd={(t) => setTransactions([{...t, id: Date.now().toString(), userId: user.username}, ...transactions])} 
+                onAdd={async (t) => {
+                  try {
+                    const id = Date.now().toString();
+                    const newTx = {...t, id, userId: user.username, createdAt: new Date().toISOString()};
+                    await setDoc(doc(db, 'users', user.username, 'transactions', id), newTx);
+                  } catch (err) {
+                    handleFirestoreError(err, OperationType.CREATE, `users/${user.username}/transactions`);
+                  }
+                }} 
                 editingTransaction={editingTransaction}
-                onUpdate={(updated) => { setTransactions(transactions.map(t => t.id === updated.id ? updated : t)); setEditingTransaction(null); }}
+                onUpdate={async (updated) => { 
+                  try {
+                    await setDoc(doc(db, 'users', user.username, 'transactions', updated.id), updated);
+                    setEditingTransaction(null); 
+                  } catch (err) {
+                    handleFirestoreError(err, OperationType.UPDATE, `users/${user.username}/transactions/${updated.id}`);
+                  }
+                }}
                 onCancelEdit={() => setEditingTransaction(null)}
               />
               <TransactionList 
                 transactions={transactions} 
                 settings={settings}
-                onDelete={(id) => { if (window.confirm('Xác nhận xóa giao dịch?')) setTransactions(transactions.filter(t => t.id !== id)); }}
+                onDelete={async (id) => { 
+                  if (window.confirm('Xác nhận xóa giao dịch?')) {
+                    try {
+                      await deleteDoc(doc(db, 'users', user.username, 'transactions', id));
+                    } catch (err) {
+                      handleFirestoreError(err, OperationType.DELETE, `users/${user.username}/transactions/${id}`);
+                    }
+                  }
+                }}
                 onEdit={(t) => { setEditingTransaction(t); document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                onUpdateStates={(id, updates) => setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))}
+                onUpdateStates={async (id, updates) => {
+                    const t = transactions.find(x => x.id === id);
+                    if (t) {
+                      try {
+                        await setDoc(doc(db, 'users', user.username, 'transactions', id), {...t, ...updates});
+                      } catch (err) {
+                        handleFirestoreError(err, OperationType.UPDATE, `users/${user.username}/transactions/${id}`);
+                      }
+                    }
+                }}
               />
             </div>
           )}

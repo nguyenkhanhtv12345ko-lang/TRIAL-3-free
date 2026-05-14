@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "name", "email", "role", "createdAt"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "User specific configuration",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "initialCash": { "type": "number" },
+        "initialBank": { "type": "number" },
+        "dailyCost": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "initialCash", "initialBank", "dailyCost", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string" },
+        "source": { "type": "string" },
+        "amount": { "type": "number" },
+        "isExcluded": { "type": "boolean" },
+        "isFromSavings": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId", "date", "content", "type", "source", "amount", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User Profiles"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/Setting" },
+      "description": "User Settings"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "User Transactions"
+    }
+  }
+}

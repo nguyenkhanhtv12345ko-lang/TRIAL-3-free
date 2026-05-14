@@ -1,66 +1,40 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User, UserRole } from '../types';
+import { loginWithGoogle } from '../firebase';
 
 interface Props {
   onLogin: (user: User) => void;
 }
 
 const Auth: React.FC<Props> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const users = JSON.parse(localStorage.getItem('cashflow_users') || '[]');
-    if (!users.find((u: any) => u.username === 'admin')) {
-      users.push({
-        username: 'admin',
-        password: '123',
-        name: 'Quản trị viên',
-        role: UserRole.ADMIN,
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('cashflow_users', JSON.stringify(users));
-    }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    const cleanUser = username.trim().toLowerCase();
-    if (!cleanUser || !password || (!isLogin && !name)) {
-      setError('Vui lòng nhập đầy đủ!');
-      return;
-    }
-    const users: User[] = JSON.parse(localStorage.getItem('cashflow_users') || '[]');
-    if (isLogin) {
-      const user = users.find(u => u.username === cleanUser && u.password === password);
-      if (user) onLogin(user);
-      else setError('Sai tài khoản hoặc mật khẩu!');
-    } else {
-      if (users.find(u => u.username === cleanUser)) {
-        setError('Tài khoản đã tồn tại!');
-        return;
-      }
-      const newUser: User = { 
-        username: cleanUser, 
-        password, 
-        name, 
+  const handleGoogleLogin = async () => {
+    try {
+      setError('');
+      setIsLoading(true);
+      const userResult = await loginWithGoogle();
+      
+      const user: User = {
+        username: userResult.uid,
+        name: userResult.displayName || 'Người dùng',
         role: UserRole.USER,
         createdAt: new Date().toISOString()
       };
-      users.push(newUser);
-      localStorage.setItem('cashflow_users', JSON.stringify(users));
-      onLogin(newUser);
+      
+      onLogin(user);
+    } catch (err: any) {
+      console.error(err);
+      setError('Đăng nhập thất bại. Vui lòng thử lại!');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-tech-900 flex items-center justify-center p-4">
-      {/* UI 2.1: Lớp container chính với bóng đổ cực sâu */}
       <div className="w-full max-w-[240px] animate-in fade-in zoom-in duration-500">
         <div className="text-center mb-6">
           <div className="w-14 h-14 bg-tech-cyan rounded-[22px] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(6,182,212,0.4)] mx-auto mb-3 transform rotate-3 ring-4 ring-tech-900">
@@ -70,50 +44,26 @@ const Auth: React.FC<Props> = ({ onLogin }) => {
           <p className="text-tech-muted/80 text-[7px] font-black uppercase tracking-[0.4em] mt-1.5">Version 2.1 Depth</p>
         </div>
 
-        <div className="bg-tech-800 border border-tech-border p-5 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-black/5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"></div>
+        <div className="bg-tech-800 border border-tech-border p-5 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-black/5 relative overflow-hidden text-center">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-tech-cyan/20 to-transparent"></div>
           
-          <div className="flex bg-tech-700/50 p-1.5 rounded-2xl mb-6 shadow-inner">
-            <button 
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${isLogin ? 'bg-tech-800 text-tech-cyan shadow-md ring-1 ring-black/5' : 'text-tech-muted/80'}`}
-            >
-              Đăng nhập
-            </button>
-            <button 
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${!isLogin ? 'bg-tech-800 text-tech-cyan shadow-md ring-1 ring-black/5' : 'text-tech-muted/80'}`}
-            >
-              Đăng ký
-            </button>
-          </div>
+          <i className="fab fa-google text-4xl text-tech-cyan mb-4 mt-2"></i>
+          <p className="text-[10px] text-tech-muted/80 mb-6 px-2 font-bold leading-relaxed">
+            Dữ liệu của bạn sẽ được đồng bộ và sao lưu an toàn trên Cloud theo tài khoản Google.
+          </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-1">
-                <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Họ tên</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-bold outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="Tên..." />
-              </div>
-            )}
-            
-            <div className="space-y-1">
-              <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Tài khoản</label>
-              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-mono outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="user..." />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Mật khẩu</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-bold outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="••••" />
-            </div>
-
-            {error && (
-              <p className="text-rose-500 text-[7px] font-black text-center uppercase py-1">{error}</p>
-            )}
-
-            <button type="submit" className="w-full bg-tech-cyan hover:bg-tech-accent text-tech-900 font-black py-3.5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(6,182,212,0.3)] active:scale-95 transition-all uppercase tracking-[0.2em] text-[10px] mt-2 border-b-4 border-tech-accent">
-              {isLogin ? 'Vào hệ thống' : 'Tạo tài khoản'}
-            </button>
-          </form>
+          <button 
+            onClick={handleGoogleLogin} 
+            disabled={isLoading}
+            className={`w-full bg-tech-cyan hover:bg-tech-accent text-tech-900 font-black py-4 rounded-2xl shadow-[0_15px_30px_-5px_rgba(6,182,212,0.3)] active:scale-95 transition-all uppercase tracking-[0.2em] text-[10px] border-b-4 border-tech-accent flex items-center justify-center gap-2 ${isLoading ? 'opacity-70' : ''}`}
+          >
+            {isLoading ? <i className="fas fa-spinner fa-spin"></i> : <i className="fab fa-google"></i>}
+            {isLoading ? 'Đang kết nối...' : 'Đăng nhập Google'}
+          </button>
+          
+          {error && (
+            <p className="text-rose-500 text-[8px] font-black mt-4 uppercase tracking-wider">{error}</p>
+          )}
         </div>
         
         <p className="text-center mt-6 text-tech-muted/80 text-[6px] font-black uppercase tracking-[0.4em] opacity-60">© 2025 Deep Flow Architecture</p>
@@ -123,3 +73,4 @@ const Auth: React.FC<Props> = ({ onLogin }) => {
 };
 
 export default Auth;
+

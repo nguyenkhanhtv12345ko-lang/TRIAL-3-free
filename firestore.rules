@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { 
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function authMatches(uid) { return isSignedIn() && request.auth.uid == uid; }
+
+    function isValidUser(data) {
+      return data.keys().size() == 5
+        && data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt'])
+        && data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 && data.uid == request.auth.uid
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.role is string && (data.role == 'user' || data.role == 'admin')
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSetting(data, userId) {
+      return data.keys().hasAll(['userId', 'initialCash', 'initialBank', 'dailyCost', 'updatedAt'])
+        && data.userId == userId
+        && data.initialCash is number
+        && data.initialBank is number
+        && data.dailyCost is number
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTransaction(data, userId) {
+      return data.keys().hasAll(['userId', 'date', 'content', 'type', 'source', 'amount', 'createdAt'])
+        && data.keys().size() >= 7 && data.keys().size() <= 9
+        && data.userId == userId
+        && data.date is string && data.date.size() <= 15
+        && data.content is string && data.content.size() <= 200
+        && data.type is string && (data.type == 'Thu' || data.type == 'Chi')
+        && data.source is string && (data.source == 'Tiền mặt' || data.source == 'Tài khoản')
+        && data.amount is number
+        && data.createdAt is timestamp
+        && (!data.keys().hasAll(['isExcluded']) || data.isExcluded is bool)
+        && (!data.keys().hasAll(['isFromSavings']) || data.isFromSavings is bool);
+    }
+
+    match /users/{userId} {
+      allow read: if isValidId(userId) && authMatches(userId);
+      allow create: if isValidId(userId) && authMatches(userId)
+                    && isValidUser(incoming())
+                    && incoming().createdAt == request.time;
+      allow update: if isValidId(userId) && authMatches(userId)
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role'])
+                    && isValidUser(incoming())
+                    && existing().createdAt == incoming().createdAt
+                    && existing().role == incoming().role; 
+    }
+
+    match /users/{userId}/settings/{settingId} {
+      allow read: if isValidId(userId) && isValidId(settingId) && authMatches(userId);
+      allow create: if isValidId(userId) && isValidId(settingId) && authMatches(userId)
+                    && exists(/databases/$(database)/documents/users/$(userId))
+                    && isValidSetting(incoming(), userId)
+                    && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) && isValidId(settingId) && authMatches(userId)
+                    && existing().userId == incoming().userId
+                    && isValidSetting(incoming(), userId)
+                    && incoming().updatedAt == request.time;
+    }
+
+    match /users/{userId}/transactions/{transactionId} {
+      allow read: if isValidId(userId) && isValidId(transactionId) && authMatches(userId);
+      allow list: if isValidId(userId) && authMatches(userId) && resource.data.userId == request.auth.uid;
+      allow create: if isValidId(userId) && isValidId(transactionId) && authMatches(userId)
+                    && exists(/databases/$(database)/documents/users/$(userId))
+                    && isValidTransaction(incoming(), userId)
+                    && incoming().createdAt == request.time;
+      allow update: if isValidId(userId) && isValidId(transactionId) && authMatches(userId)
+                    && existing().userId == incoming().userId
+                    && isValidTransaction(incoming(), userId)
+                    && existing().createdAt == incoming().createdAt;
+      allow delete: if isValidId(userId) && isValidId(transactionId) && authMatches(userId)
+                    && existing().userId == request.auth.uid;
+    }
+  }
+}
