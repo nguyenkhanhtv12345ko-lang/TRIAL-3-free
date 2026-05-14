@@ -1,5 +1,6 @@
 {
   "name": "CashFlow Master - Quản lý Thu Chi Cá Nhân",
   "description": "Một ứng dụng quản lý dòng tiền cá nhân và doanh nghiệp nhỏ, hỗ trợ theo dõi thu chi và phân tích tài chính chuyên nghiệp.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }

@@ -59,30 +59,30 @@ const Auth: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-tech-900 flex items-center justify-center p-4">
       {/* UI 2.1: Lớp container chính với bóng đổ cực sâu */}
       <div className="w-full max-w-[240px] animate-in fade-in zoom-in duration-500">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-indigo-600 rounded-[22px] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(79,70,229,0.4)] mx-auto mb-3 transform rotate-3 ring-4 ring-white">
-            <i className="fas fa-vault text-white text-xl"></i>
+          <div className="w-14 h-14 bg-tech-cyan rounded-[22px] flex items-center justify-center shadow-[0_20px_40px_-10px_rgba(6,182,212,0.4)] mx-auto mb-3 transform rotate-3 ring-4 ring-tech-900">
+            <i className="fas fa-vault text-tech-900 text-xl"></i>
           </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tighter leading-none">CASH<span className="text-indigo-600">FLOW</span></h1>
-          <p className="text-slate-400 text-[7px] font-black uppercase tracking-[0.4em] mt-1.5">Version 2.1 Depth</p>
+          <h1 className="text-xl font-black text-white tracking-tighter leading-none">CASH<span className="text-tech-cyan">FLOW</span></h1>
+          <p className="text-tech-muted/80 text-[7px] font-black uppercase tracking-[0.4em] mt-1.5">Version 2.1 Depth</p>
         </div>
 
-        <div className="bg-white border border-slate-100 p-5 rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-black/5 relative overflow-hidden">
+        <div className="bg-tech-800 border border-tech-border p-5 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] ring-1 ring-black/5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent"></div>
           
-          <div className="flex bg-slate-100/50 p-1.5 rounded-2xl mb-6 shadow-inner">
+          <div className="flex bg-tech-700/50 p-1.5 rounded-2xl mb-6 shadow-inner">
             <button 
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${isLogin ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}
+              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${isLogin ? 'bg-tech-800 text-tech-cyan shadow-md ring-1 ring-black/5' : 'text-tech-muted/80'}`}
             >
               Đăng nhập
             </button>
             <button 
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${!isLogin ? 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5' : 'text-slate-400'}`}
+              className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all ${!isLogin ? 'bg-tech-800 text-tech-cyan shadow-md ring-1 ring-black/5' : 'text-tech-muted/80'}`}
             >
               Đăng ký
             </button>
@@ -91,32 +91,32 @@ const Auth: React.FC<Props> = ({ onLogin }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-1">
-                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Họ tên</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all" placeholder="Tên..." />
+                <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Họ tên</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-bold outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="Tên..." />
               </div>
             )}
             
             <div className="space-y-1">
-              <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Tài khoản</label>
-              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-[10px] font-mono outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all" placeholder="user..." />
+              <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Tài khoản</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-mono outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="user..." />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Mật khẩu</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-[10px] font-bold outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all" placeholder="••••" />
+              <label className="text-[7px] font-black text-tech-muted/80 uppercase tracking-widest ml-1">Mật khẩu</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-tech-900 border border-tech-border rounded-xl px-4 py-2.5 text-white text-[10px] font-bold outline-none focus:ring-2 focus:ring-tech-cyan/20 focus:border-tech-cyan/50 transition-all" placeholder="••••" />
             </div>
 
             {error && (
               <p className="text-rose-500 text-[7px] font-black text-center uppercase py-1">{error}</p>
             )}
 
-            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(79,70,229,0.3)] active:scale-95 transition-all uppercase tracking-[0.2em] text-[10px] mt-2 border-b-4 border-indigo-800">
+            <button type="submit" className="w-full bg-tech-cyan hover:bg-tech-accent text-tech-900 font-black py-3.5 rounded-2xl shadow-[0_15px_30px_-5px_rgba(6,182,212,0.3)] active:scale-95 transition-all uppercase tracking-[0.2em] text-[10px] mt-2 border-b-4 border-tech-accent">
               {isLogin ? 'Vào hệ thống' : 'Tạo tài khoản'}
             </button>
           </form>
         </div>
         
-        <p className="text-center mt-6 text-slate-400 text-[6px] font-black uppercase tracking-[0.4em] opacity-60">© 2025 Deep Flow Architecture</p>
+        <p className="text-center mt-6 text-tech-muted/80 text-[6px] font-black uppercase tracking-[0.4em] opacity-60">© 2025 Deep Flow Architecture</p>
       </div>
     </div>
   );
